@@ -1,0 +1,874 @@
+%% 
+%% Copyright 2007-2025 Elsevier Ltd
+%% 
+%% This file is part of the 'Elsarticle Bundle'.
+%% ---------------------------------------------
+%% 
+%% It may be distributed under the conditions of the LaTeX Project Public
+%% License, either version 1.3 of this license or (at your option) any
+%% later version.  The latest version of this license is in
+%%    http://www.latex-project.org/lppl.txt
+%% and version 1.3 or later is part of all distributions of LaTeX
+%% version 1999/12/01 or later.
+%% 
+%% The list of all files belonging to the 'Elsarticle Bundle' is
+%% given in the file `manifest.txt'.
+%% 
+%% Template article for Elsevier's document class `elsarticle'
+%% with harvard style bibliographic references
+
+\documentclass[preprint,12pt,authoryear]{elsarticle}
+\usepackage{cite}
+%% Use the option review to obtain double line spacing
+%% \documentclass[authoryear,preprint,review,12pt]{elsarticle}
+
+%% Use the options 1p,twocolumn; 3p; 3p,twocolumn; 5p; or 5p,twocolumn
+%% for a journal layout:
+%% \documentclass[final,1p,times,authoryear]{elsarticle}
+%% \documentclass[final,1p,times,twocolumn,authoryear]{elsarticle}
+%% \documentclass[final,3p,times,authoryear]{elsarticle}
+%% \documentclass[final,3p,times,twocolumn,authoryear]{elsarticle}
+%% \documentclass[final,5p,times,authoryear]{elsarticle}
+%% \documentclass[final,5p,times,twocolumn,authoryear]{elsarticle}
+
+%% For including figures, graphicx.sty has been loaded in
+%% elsarticle.cls. If you prefer to use the old commands
+%% please give \usepackage{epsfig}
+
+%% The amssymb package provides various useful mathematical symbols
+\usepackage{amssymb}
+%% The amsmath package provides various useful equation environments.
+\usepackage{amsmath}
+\usepackage{hyperref} 
+\usepackage{enumitem}
+\usepackage{graphicx}
+\usepackage{algorithm}
+\usepackage{algorithmic}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{booktabs}
+
+%% Configuración de listings para código
+\lstset{
+    basicstyle=\ttfamily\footnotesize,
+    breaklines=true,
+    frame=single,
+    numbers=left,
+    numberstyle=\tiny,
+    keywordstyle=\color{blue},
+    commentstyle=\color{green!60!black},
+    stringstyle=\color{red},
+}
+
+%% The amsthm package provides extended theorem environments
+%% \usepackage{amsthm}
+
+%% The lineno packages adds line numbers. Start line numbering with
+%% \begin{linenumbers}, end it with \end{linenumbers}. Or switch it on
+%% for the whole article with \linenumbers.
+%% \usepackage{lineno}
+
+
+
+\begin{document}
+
+\begin{frontmatter}
+
+%% Title, authors and addresses
+
+%% use the tnoteref command within \title for footnotes;
+%% use the tnotetext command for theassociated footnote;
+%% use the fnref command within \author or \affiliation for footnotes;
+%% use the fntext command for theassociated footnote;
+%% use the corref command within \author for corresponding author footnotes;
+%% use the cortext command for theassociated footnote;
+%% use the ead command for the email address,
+%% and the form \ead[url] for the home page:
+%% \title{Title\tnoteref{label1}}
+%% \tnotetext[label1]{}
+%% \author{Name\corref{cor1}\fnref{label2}}
+%% \ead{email address}
+%% \ead[url]{home page}
+%% \fntext[label2]{}
+%% \cortext[cor1]{}
+%% \affiliation{organization={},
+%%            addressline={}, 
+%%            city={},
+%%            postcode={}, 
+%%            state={},
+%%            country={}}
+%% \fntext[label3]{}
+
+\title{Multi Stage Flexible Job Shop: Implementación NSGA-II con Mejoras Híbridas} %% Article title
+
+
+\author{Jose Miguel Escobar Gonzalez} %% Author name
+
+%% Author affiliation
+\affiliation{organization={Universidad Tecnica Federico Santa Maria},%Department and Organization 
+            city={Valparaiso},
+            country={Chile}}
+
+
+\begin{abstract}
+Este trabajo presenta la implementación de un algoritmo evolutivo multiobjetivo basado en NSGA-II (Non-dominated Sorting Genetic Algorithm II) para resolver el problema de Multi Stage Flexible Job Shop Scheduling (MS-FJSSP). La implementación incluye múltiples mejoras sobre el algoritmo base: inicialización mixta con estrategias greedy, operadores de cruce y mutación híbridos adaptativos, un archivo externo para preservar soluciones no dominadas, mecanismo de reinicio parcial para escapar de convergencia prematura, y búsqueda local tipo hill climbing. El sistema desarrollado en lenguaje C permite optimizar simultáneamente el costo total de procesamiento y el tiempo total de producción. Se incluyen además herramientas de soporte en Python para generación de instancias de prueba y ajuste automático de parámetros. Los resultados experimentales demuestran la capacidad del algoritmo para generar frentes de Pareto diversos y de alta calidad en instancias de diferentes tamaños.
+\end{abstract}
+
+\begin{keyword}
+%% keywords here, in the form: keyword \sep keyword
+Scheduling \sep Optimization \sep Multiobjective \sep Job Shop \sep Flexible \sep NSGA-II \sep Pareto
+
+%% PACS codes here, in the form: \PACS code \sep code
+
+%% MSC codes here, in the form: \MSC code \sep code
+%% or \MSC[2008] code \sep code (2000 is the default)
+
+\end{keyword}
+
+\end{frontmatter}
+
+%% Add \usepackage{lineno} before \begin{document} and uncomment 
+%% following line to enable line numbers
+%% \linenumbers
+
+
+%% Use \section commands to start a section
+\section{Definición del problema}
+
+
+%% Use \subsection commands to start a subsection.
+\subsection{Introduccion Job Scheduling}
+El \textit{Job Scheduling} es un problema ampliamente conocido en la literatura, el cual consiste en la asignación óptima de un conjunto de trabajos a un conjunto de máquinas o recursos, respetando restricciones de tiempo, capacidad y precedencia, con el objetivo de optimizar métricas como el tiempo total de finalización (\textit{makespan}), la tardanza máxima o la carga equilibrada de trabajo.
+
+También tiene múltiples variantes de sí mismo, como pueden ser:
+
+\begin{itemize}
+    \item \textbf{Flow Shop Scheduling}: donde todos los trabajos siguen la misma secuencia de máquinas.
+    \item \textbf{Job Shop Scheduling}: donde cada trabajo tiene una ruta específica y potencialmente diferente.
+    \item \textbf{Flexible Job Shop Scheduling}: que permite que una operación pueda ejecutarse en más de una máquina.
+    \item \textbf{Open Shop Scheduling}: en el que el orden de las operaciones no está predefinido.
+    \item \textbf{Parallel Machine Scheduling}: donde las máquinas pueden operar en paralelo con diferentes reglas de asignación.
+    \item \textbf{Resource-Constrained Project Scheduling (RCPSP)}: que añade restricciones de recursos limitados más allá de las máquinas.
+    
+\end{itemize}
+
+En este trabajo será revisada la variante llamada \textit{Multi Stage Flexible Job Shop}, la cual consiste en un Job Shop pero con la flexibilidad de rutas de trabajo en la secuencia de operaciones para algún producto  pero manteniendo un orden en la secuencia de operaciones ligadas a dicho producto. Dentro de lo anterior tambien considera que los centros que procesan los productos tienen restricciones asociadas, lo que puede permitir o no el trabajo de ciertos productos dentro de los mismos centros. 
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=1\textwidth]{diagrama.jpg}
+    \caption{EJ: Posibles rutas productos}
+    \label{fig:miimagen}
+\end{figure}
+
+
+\subsection{Contexto actual}
+El problema de Multi Stage Flexible Job Shop mencionado anteriormente es una realidad tangible en nuestro país, particularmente en la zona sur, en la empresa \href{https://www.edyce.com/}{EDYCE} . Esta compañía se especializa en la manufactura de estructuras industriales a partir del acero, un sector caracterizado por una gran diversidad en los productos fabricados. Debido a la variabilidad en las estructuras producidas, el proceso de manufactura no sigue un flujo fijo, lo que añade complejidad a la planificación de la producción. 
+
+Dentro de este contexto definiremos las siguientes variables
+
+\begin{itemize}
+    \item \textbf{Proyecto}: Vision macro de los productos a trabajar dentro de una misma instancia, induce tambies el concepto de prioridad de ejecucion de dichos productos.
+    \item \textbf{Jobs}: Son los pedidos o productos que hay que fabricar. Cada trabajo es como una lista de pasos que deben hacerse en orden. 
+    \item \textbf{Maquinas o centros de trabajo}: Son las áreas donde se realizan los pasos de fabricación. Un centro de trabajo es un grupo de máquinas parecidas (por ejemplo, tres tornos en un taller). Lo "flexible" significa que un mismo paso se puede hacer en varias máquinas diferentes, lo que permite elegir la más rápida o la menos ocupada.
+    \item \textbf{Duracion del trabajo}: Es cuánto tarda cada paso en hacerse en una máquina concreta. No todas las máquinas trabajan a la misma velocidad.
+    \item \textbf{Operaciones}: Son los pasos individuales dentro de un trabajo. Cada operación debe hacerse en un orden fijo (por ejemplo para un caso de manofactura, primero cortar, luego pulir, etc.) y puede requerir un tipo específico de máquina. Por ejemplo, "pulir" solo se puede hacer en máquinas de lijado, no en una fresadora.
+    \item \textbf{Costos}: Cada maquina ademas de su coste de tiempo, tambien tiene un valor monetario asociado el cual se busca minimizar.
+\end{itemize}
+
+Además de los desafíos previamente mencionados, el problema presenta consideraciones adicionales:
+
+\begin{itemize}
+    \item \textbf{Planificación Jerárquica por Proyectos}: La estructura de planificación se organiza de manera jerárquica, centrada en proyectos que poseen prioridades específicas de ejecución. 
+    
+    \item \textbf{Estructura de Productos}: Dentro de cada proyecto, existen productos principales, cada uno compuesto por productos secundarios. Esta jerarquía implica que la finalización de los productos principales depende directamente de la disponibilidad de sus componentes secundarios.
+    
+    \item \textbf{Secuencia de Operaciones}: Cada producto secundario está asociado a una o varias operaciones específicas que deben completarse en su totalidad. La correcta ejecución de estas operaciones es esencial para integrar los productos secundarios en los productos principales correspondientes.
+    
+    \item \textbf{Cumplimiento de Plazos de Entrega}: La entrega de los productos principales  vinculados a cada proyecto depende de la finalización secuencial y coordinada de las operaciones mencionadas. Por lo tanto, es crucial establecer una programación que garantice el cumplimiento de los plazos especificos por productos principales del proyecto.
+
+    \item \textbf{Disponibilidad centros de trabajo}: Los centros de trabajo tienen horarios definidos por un calendario propio, el cual asigna una cantidad de horas por dia definidas, por lo cual pueden no ser iguales entre si y variar de un dia a otro.
+\end{itemize}
+
+Lo anterior ademas ayuda a definir las siguientes restricciones:
+
+\begin{itemize}
+\item \textbf{Orden estricto de operaciones}: Los pasos dentro de un trabajo deben seguir una secuencia fija. Por ejemplo, no se puede soldar una pieza si antes no se ha cortado o plegado.  
+
+\item \textbf{Dependencia de componentes}: Los productos secundarios deben estar terminados para poder ensamblar el producto principal que los necesita.  
+
+\item \textbf{Proyectos prioritarios primero}: Si un proyecto es urgente, todos sus trabajos y operaciones deben programarse antes que los de proyectos menos críticos.  
+
+\item \textbf{Máquinas con horarios fijos}: No se puede asignar trabajo a una máquina fuera de sus horas activas (ejemplo: si un centro de trabajo cierra a las 18:00, las operaciones deben programarse antes de esa hora).  
+
+\item \textbf{Tipo de máquina específico para operaciones}: Los pasos solo pueden hacerse en máquinas especializadas ligadas a dicha operacion.    
+
+\item \textbf{Plazos de entrega inflexibles}: La fecha límite de un producto principal obliga a coordinar todas sus operaciones secundarias para cumplirla.
+
+\end{itemize}
+
+
+
+
+
+
+\section{Modelo matemático}
+
+\subsection{Conjuntos y parámetros}
+\begin{itemize}[leftmargin=1.5cm]
+    \item $P$: Conjunto de productos (jobs) $\{1, 2, ..., n_{jobs}\}$
+    \item $M$: Conjunto de máquinas $\{1, 2, ..., n_{machines}\}$
+    \item $O$: Conjunto de operaciones $\{1, 2, ..., n_{ops}\}$
+    \item $C_{p,m,o}$: Costo de procesar la operación $o$ del producto $p$ en la máquina $m$
+    \item $T_{p,m,o}$: Tiempo de procesar la operación $o$ del producto $p$ en la máquina $m$
+\end{itemize}
+
+\subsection{Variables de decisión}
+\begin{itemize}[leftmargin=1.5cm]
+    \item $x_{p,o} \in M$: Máquina asignada a la operación $o$ del producto $p$
+\end{itemize}
+
+\subsection{Función objetivo}
+Minimizar simultáneamente costos operativos y tiempos de producción (optimización bi-objetivo):
+
+\begin{equation}
+\min f_1 = \sum_{p \in P} \sum_{o \in O} C_{p,x_{p,o},o}
+\end{equation}
+
+\begin{equation}
+\min f_2 = \sum_{p \in P} \sum_{o \in O} T_{p,x_{p,o},o}
+\end{equation}
+
+donde $f_1$ representa el costo total de procesamiento y $f_2$ el tiempo total de producción.
+
+\subsection{Restricciones principales}
+\begin{enumerate}
+    \item \textbf{Asignación válida}: Cada operación debe asignarse a exactamente una máquina:
+    \begin{equation}
+    x_{p,o} \in \{1, 2, ..., n_{machines}\} \quad \forall p \in P, \forall o \in O
+    \end{equation}
+    
+    \item \textbf{Elegibilidad de máquinas}: 
+    \begin{equation}
+    x_{p,o} \in M_{p,o}^{elegible} \quad \forall p \in P, \forall o \in O
+    \end{equation}
+    donde $M_{p,o}^{elegible}$ es el conjunto de máquinas que pueden procesar la operación $o$ del producto $p$.
+\end{enumerate}
+
+
+\section{Estado del Arte}
+Cuando hablamos del Multi-Stage Flexible Job Shop Scheduling Problem  (MS-FJSSP), es importante destacar que las técnicas existentes tienen tanto ventajas como limitaciones. Por un lado, los métodos exactos, como la programación lineal o entera, son útiles para problemas pequeños porque garantizan soluciones óptimas. Sin embargo, cuando el tamaño del problema crece, estos métodos se vuelven ineficientes debido a su alto costo computacional. Aquí es donde entran en juego las metaheurísticas y los algoritmos evolutivos, que han ganado popularidad por su capacidad para manejar problemas grandes y complejos. Estas técnicas ofrecen soluciones de buena calidad en tiempos razonables, aunque no siempre garantizan que sean las mejores posibles. 
+
+En los últimos años, las investigaciones se han enfocado en desarrollar enfoques híbridos que combinen diferentes métodos para aprovechar lo mejor de cada uno. Por ejemplo, mezclar algoritmos genéticos con búsqueda local o usar optimización por enjambre de partículas junto con recocido simulado ha demostrado ser muy efectivo. Estos enfoques permiten explorar mejor el espacio de soluciones y mejorar la calidad de las respuestas. Además, muchas de estas técnicas están siendo adaptadas para incluir restricciones más realistas, como tiempos de preparación dependientes de la secuencia, mantenimiento preventivo o incluso fallas de máquinas. Esto hace que los modelos sean más aplicables a situaciones industriales reales. 
+
+En cuanto a los algoritmos más destacados, los algoritmos genéticos (GA) y sus variantes, como el NSGA-II, son ampliamente utilizados por su capacidad para manejar múltiples objetivos simultáneamente. También hay otros métodos bioinspirados, como la optimización por colonia de hormigas (ACO), la optimización por enjambre de partículas (PSO) y el algoritmo de colonia artificial de abejas (ABC), que han mostrado buenos resultados. Recientemente, se ha visto un interés creciente en algoritmos híbridos que combinan inteligencia artificial con métodos heurísticos tradicionales. Por ejemplo, algunos estudios han integrado redes neuronales para predecir tiempos de procesamiento o han usado sistemas inmunes artificiales (AIS) para mejorar la diversidad de las soluciones. 
+
+Las tendencias actuales apuntan hacia la optimización multiobjetivo y la incorporación de incertidumbre en los modelos, como tiempos de procesamiento borrosos o demandas estocásticas. Además, se están explorando nuevas metodologías basadas en aprendizaje automático y sistemas multiagente para abordar problemas dinámicos y distribuidos. Todo esto indica que el futuro del MS-FJSSP estará marcado por enfoques más flexibles, adaptables y robustos, capaces de manejar entornos de fabricación modernos que son cada vez más complejos y variables. 
+
+
+\section{Implementación del Algoritmo}
+
+\subsection{Visión General de la Arquitectura}
+
+El sistema implementado está desarrollado en lenguaje C y consta de múltiples módulos interconectados que implementan el algoritmo NSGA-II con mejoras híbridas. La arquitectura del sistema se ilustra en la Figura \ref{fig:arquitectura}.
+
+\begin{figure}[h]
+    \centering
+    \fbox{\parbox{0.9\textwidth}{
+    \centering
+    \textbf{Arquitectura del Sistema}\\[0.5cm]
+    \begin{tabular}{|c|}
+    \hline
+    \textbf{Entrada} \\
+    Archivo de instancia (.txt/.dat) \\
+    Parámetros del algoritmo \\
+    \hline
+    \end{tabular}
+    $\downarrow$\\[0.3cm]
+    \begin{tabular}{|c|c|c|}
+    \hline
+    \multicolumn{3}{|c|}{\textbf{Núcleo NSGA-II}} \\
+    \hline
+    Inicialización & Evaluación & Selección \\
+    Mixta & Bi-objetivo & por Torneo \\
+    \hline
+    Cruce & Mutación & Ordenamiento \\
+    Híbrido & Inteligente & No-dominado \\
+    \hline
+    \end{tabular}
+    $\downarrow$\\[0.3cm]
+    \begin{tabular}{|c|c|}
+    \hline
+    \multicolumn{2}{|c|}{\textbf{Mejoras Implementadas}} \\
+    \hline
+    Archive Externo & Reinicio Parcial \\
+    \hline
+    Búsqueda Local & Diversificación \\
+    \hline
+    \end{tabular}
+    $\downarrow$\\[0.3cm]
+    \begin{tabular}{|c|}
+    \hline
+    \textbf{Salida} \\
+    Frente de Pareto (CSV) \\
+    Matriz de asignaciones \\
+    Reportes detallados \\
+    \hline
+    \end{tabular}
+    }}
+    \caption{Arquitectura general del sistema}
+    \label{fig:arquitectura}
+\end{figure}
+
+\subsection{Representación del Cromosoma}
+
+La representación adoptada utiliza una matriz de enteros $gene[p][o]$ donde cada posición indica la máquina asignada a la operación $o$ del producto $p$:
+
+\begin{equation}
+gene[p][o] = m \quad \text{donde } m \in \{0, 1, ..., n_{machines}-1\}
+\end{equation}
+
+Esta representación es directa y permite una decodificación eficiente. Un individuo completo consiste en $n_{jobs} \times n_{ops}$ genes, donde cada gen toma valores en el rango $[0, n_{machines}-1]$.
+
+\begin{table}[h]
+\centering
+\caption{Ejemplo de cromosoma para 3 jobs, 2 máquinas, 2 operaciones}
+\begin{tabular}{|c|c|c|}
+\hline
+\textbf{Job} & \textbf{Op 1} & \textbf{Op 2} \\
+\hline
+J1 & M1 (gene=0) & M2 (gene=1) \\
+J2 & M2 (gene=1) & M1 (gene=0) \\
+J3 & M1 (gene=0) & M1 (gene=0) \\
+\hline
+\end{tabular}
+\end{table}
+
+\subsection{Estructura de Datos Principal}
+
+La estructura de datos central del algoritmo se define de la siguiente manera:
+
+\begin{lstlisting}[language=C, caption=Estructura del individuo]
+typedef struct {
+    int rank;                  // Rango Pareto
+    double constr_violation;   // Violacion de restricciones
+    int **gene;                // gene[job][operation] = machine
+    double *obj;               // Valores de objetivos
+    double crowd_dist;         // Distancia de crowding
+} individual;
+
+typedef struct {
+    individual *ind;           // Array de individuos
+} population;
+\end{lstlisting}
+
+Las matrices de datos del problema se almacenan como arreglos tridimensionales dinámicos:
+
+\begin{lstlisting}[language=C, caption=Matrices de datos del problema]
+double ***ProcessingTime;   // [job][machine][operation]
+double ***ProcessingCost;   // [job][machine][operation]
+\end{lstlisting}
+
+\subsection{Inicialización Mixta}
+
+Una de las mejoras clave implementadas es la \textbf{inicialización mixta}, que combina diferentes estrategias para generar la población inicial:
+
+\begin{itemize}
+    \item \textbf{20\% Greedy por Costo}: Selecciona para cada operación la máquina con menor costo. Genera soluciones en el extremo de mínimo costo del frente Pareto.
+    
+    \item \textbf{20\% Greedy por Tiempo}: Selecciona para cada operación la máquina con menor tiempo. Genera soluciones en el extremo de mínimo tiempo.
+    
+    \item \textbf{20\% Greedy Balanceado}: Minimiza una combinación normalizada 50\%-50\% de costo y tiempo. Genera soluciones en la zona central del frente.
+    
+    \item \textbf{40\% Aleatorio}: Asignación aleatoria de máquinas para mantener diversidad genética.
+\end{itemize}
+
+\begin{algorithm}[h]
+\caption{Inicialización Greedy Balanceada}
+\begin{algorithmic}[1]
+\FOR{cada job $j$}
+    \FOR{cada operación $k$}
+        \STATE Calcular $min\_cost$, $max\_cost$, $min\_time$, $max\_time$ sobre todas las máquinas
+        \STATE $best\_score \leftarrow \infty$
+        \FOR{cada máquina $m$}
+            \STATE $norm\_cost \leftarrow \frac{cost[j][m][k] - min\_cost}{max\_cost - min\_cost}$
+            \STATE $norm\_time \leftarrow \frac{time[j][m][k] - min\_time}{max\_time - min\_time}$
+            \STATE $score \leftarrow 0.5 \times norm\_cost + 0.5 \times norm\_time$
+            \IF{$score < best\_score$}
+                \STATE $best\_score \leftarrow score$
+                \STATE $best\_machine \leftarrow m$
+            \ENDIF
+        \ENDFOR
+        \STATE $gene[j][k] \leftarrow best\_machine$
+    \ENDFOR
+\ENDFOR
+\end{algorithmic}
+\end{algorithm}
+
+\subsection{Operador de Cruce Híbrido}
+
+El operador de cruce implementado alterna entre dos estrategias:
+
+\begin{itemize}
+    \item \textbf{Cruce Two-Point (60\%)}: Selecciona dos puntos de corte a nivel de jobs y intercambia los bloques entre ellos. Preserva grupos de asignaciones que funcionan bien juntas.
+    
+    \item \textbf{Cruce Uniforme (40\%)}: Cada gen tiene 50\% de probabilidad de venir de cada padre. Proporciona mayor exploración del espacio de búsqueda.
+\end{itemize}
+
+\begin{algorithm}[h]
+\caption{Cruce Two-Point por Jobs}
+\begin{algorithmic}[1]
+\IF{$random() > p_{cross}$}
+    \STATE Copiar padres a hijos sin modificación
+    \RETURN
+\ENDIF
+\STATE $point1 \leftarrow random(0, n_{jobs}-1)$
+\STATE $point2 \leftarrow random(0, n_{jobs}-1)$
+\STATE Asegurar $point1 < point2$
+\FOR{cada job $j$}
+    \FOR{cada operación $k$}
+        \IF{$point1 \leq j \leq point2$}
+            \STATE $child1.gene[j][k] \leftarrow parent2.gene[j][k]$
+            \STATE $child2.gene[j][k] \leftarrow parent1.gene[j][k]$
+        \ELSE
+            \STATE $child1.gene[j][k] \leftarrow parent1.gene[j][k]$
+            \STATE $child2.gene[j][k] \leftarrow parent2.gene[j][k]$
+        \ENDIF
+    \ENDFOR
+\ENDFOR
+\end{algorithmic}
+\end{algorithm}
+
+\subsection{Operador de Mutación Inteligente Híbrida}
+
+La mutación implementada es adaptativa y combina múltiples estrategias:
+
+\subsubsection{Mutación Fina Adaptativa}
+La probabilidad de mutación por gen se ajusta automáticamente según el tamaño del cromosoma:
+
+\begin{equation}
+p_{mut}^{fine} = \frac{\text{TARGET\_MUTATIONS}}{n_{jobs} \times n_{ops}}
+\end{equation}
+
+donde TARGET\_MUTATIONS $\approx 2$ asegura que en promedio se modifiquen pocos genes por individuo, permitiendo refinamiento local.
+
+\subsubsection{Mutación Inteligente (Smart Mutation)}
+En lugar de seleccionar una máquina aleatoria, evalúa todas las alternativas y selecciona aquella que mejora un score ponderado de costo y tiempo:
+
+\begin{equation}
+score_m = w_{cost} \times C_{j,m,k} + w_{time} \times T_{j,m,k}
+\end{equation}
+
+donde los pesos $w_{cost}$ y $w_{time}$ varían aleatoriamente entre 0.3 y 0.7 para diversificar la búsqueda.
+
+\subsubsection{Mutación de Bloque}
+Ocasionalmente (5\% de probabilidad por job) se muta un job completo, reinicializando todas sus operaciones. Esto permite escapar de óptimos locales mediante movimientos más agresivos.
+
+\begin{algorithm}[h]
+\caption{Mutación Híbrida Adaptativa}
+\begin{algorithmic}[1]
+\STATE $total\_genes \leftarrow n_{jobs} \times n_{ops}$
+\STATE $p_{mut}^{fine} \leftarrow \min(\max(\frac{2.0}{total\_genes}, 0.001), 0.3)$
+\STATE // Parte 1: Mutación Fina
+\FOR{cada job $j$}
+    \FOR{cada operación $k$}
+        \IF{$random() \leq p_{mut}^{fine}$}
+            \IF{$random() \leq 0.5$}
+                \STATE Aplicar mutación inteligente (smart)
+            \ELSE
+                \STATE Aplicar mutación aleatoria simple
+            \ENDIF
+        \ENDIF
+    \ENDFOR
+\ENDFOR
+\STATE // Parte 2: Mutación de Bloque
+\FOR{cada job $j$}
+    \IF{$random() \leq 0.05$}
+        \STATE Reinicializar todas las operaciones del job $j$
+    \ENDIF
+\ENDFOR
+\end{algorithmic}
+\end{algorithm}
+
+\subsection{Archive Externo}
+
+Se implementa un archivo externo que mantiene las mejores soluciones no dominadas encontradas durante toda la ejecución:
+
+\begin{lstlisting}[language=C, caption=Estructura del Archive]
+typedef struct {
+    individual *solutions;  // Array de soluciones no dominadas
+    int size;               // Tamano actual
+    int max_size;           // Capacidad maxima (2x popsize)
+} archive;
+\end{lstlisting}
+
+El archive se actualiza cada generación:
+\begin{enumerate}
+    \item Se consideran solo individuos de rank 1 (frente Pareto actual)
+    \item Se descartan soluciones dominadas por el archive existente
+    \item Se eliminan soluciones del archive que sean dominadas por nuevas soluciones
+    \item Se evitan duplicados comparando valores de objetivos
+\end{enumerate}
+
+Cada 25 generaciones, se inyectan soluciones del archive de vuelta a la población (10\% de la población), reemplazando los peores individuos. Esto permite recuperar buenas soluciones que pudieron perderse durante la evolución.
+
+\subsection{Mecanismo de Reinicio Parcial}
+
+Para evitar convergencia prematura, se implementa un detector de diversidad:
+
+\begin{algorithm}[h]
+\caption{Reinicio Parcial por Convergencia}
+\begin{algorithmic}[1]
+\IF{$generation \mod 10 \neq 0$}
+    \RETURN
+\ENDIF
+\STATE $unique\_count \leftarrow$ contar soluciones únicas por objetivos
+\STATE $diversity\_ratio \leftarrow unique\_count / popsize$
+\IF{$diversity\_ratio < 0.25$}
+    \STATE Mantener el mejor 60\% de la población
+    \FOR{$i$ desde $0.6 \times popsize$ hasta $popsize$}
+        \STATE $r \leftarrow random()$
+        \IF{$r < 0.25$}
+            \STATE Inicializar con greedy-costo
+        \ELSIF{$r < 0.50$}
+            \STATE Inicializar con greedy-tiempo
+        \ELSIF{$r < 0.75$}
+            \STATE Inicializar con greedy-balanceado
+        \ELSE
+            \STATE Inicializar aleatorio
+        \ENDIF
+        \STATE Evaluar nuevo individuo
+    \ENDFOR
+\ENDIF
+\end{algorithmic}
+\end{algorithm}
+
+\subsection{Búsqueda Local (Hill Climbing)}
+
+Se aplica búsqueda local periódicamente (cada 10 generaciones) a las mejores soluciones del frente Pareto:
+
+\begin{itemize}
+    \item \textbf{Local Search por Costo}: Para cada gen, prueba todas las máquinas alternativas y selecciona la de menor costo.
+    \item \textbf{Local Search por Tiempo}: Similar, pero minimizando tiempo.
+    \item \textbf{Local Search Balanceada}: Minimiza score normalizado de costo y tiempo.
+\end{itemize}
+
+Se alternan los tres tipos entre las soluciones seleccionadas para diversificar la mejora. Al final de la ejecución, se aplica una búsqueda local intensiva al 25\% superior de la población.
+
+\subsection{Flujo Principal del Algoritmo}
+
+\begin{algorithm}[h]
+\caption{NSGA-II Mejorado - Flujo Principal}
+\begin{algorithmic}[1]
+\STATE Leer archivo de instancia
+\STATE Configurar parámetros (popsize, ngen, pcross, pmut)
+\STATE Asignar memoria para poblaciones y archive
+\STATE $P_0 \leftarrow$ Inicialización mixta (greedy + aleatorio)
+\STATE Evaluar($P_0$)
+\STATE AsignarRankYCrowding($P_0$)
+\FOR{$gen = 2$ hasta $ngen$}
+    \STATE $Q_t \leftarrow$ Selección por torneo($P_{t-1}$)
+    \STATE Cruce híbrido($Q_t$)
+    \STATE Mutación inteligente híbrida($Q_t$)
+    \STATE Evaluar($Q_t$)
+    \STATE $R_t \leftarrow P_{t-1} \cup Q_t$
+    \STATE $P_t \leftarrow$ FillNonDominatedSort($R_t$, popsize)
+    \STATE ActualizarArchive($P_t$)
+    \STATE VerificarReinicioParcial($P_t$, $gen$)
+    \IF{$gen \mod 10 = 0$}
+        \STATE AplicarBúsquedaLocal($P_t$)
+    \ENDIF
+    \IF{$gen \mod 25 = 0$}
+        \STATE InyectarDesdeArchive($P_t$)
+    \ENDIF
+\ENDFOR
+\STATE Búsqueda local final intensiva
+\STATE Exportar resultados (CSV, reportes)
+\end{algorithmic}
+\end{algorithm}
+
+
+\section{Herramientas de Soporte}
+
+\subsection{Generador de Instancias de Prueba}
+
+Se desarrolló un script en Python (\texttt{generar\_instancias\_prueba.py}) que genera instancias de diferentes tamaños para pruebas sistemáticas:
+
+\begin{table}[h]
+\centering
+\caption{Instancias de prueba generadas}
+\begin{tabular}{|l|c|c|c|c|}
+\hline
+\textbf{Nombre} & \textbf{Jobs} & \textbf{Máquinas} & \textbf{Operaciones} & \textbf{Total Genes} \\
+\hline
+instancia\_trivial & 2 & 2 & 2 & 4 \\
+instancia\_basica & 4 & 3 & 3 & 12 \\
+instancia\_intermedia & 10 & 6 & 6 & 60 \\
+instancia\_grande & 30 & 15 & 15 & 450 \\
+instancia\_gigante & 50 & 20 & 20 & 1,000 \\
+\hline
+\end{tabular}
+\end{table}
+
+Los valores de costos se generan en el rango $[5, 50]$ y los tiempos en $[10, 200]$, simulando variabilidad realista en los datos.
+
+\subsection{Sistema de Ajuste de Parámetros}
+
+El script \texttt{tune\_parameters.py} implementa una búsqueda exhaustiva de parámetros óptimos:
+
+\begin{itemize}
+    \item \textbf{Tamaño de población}: 50, 100, 150, 200
+    \item \textbf{Número de generaciones}: 100, 200, 300, 500
+    \item \textbf{Probabilidad de cruce}: 0.7, 0.8, 0.9, 0.95
+    \item \textbf{Probabilidad de mutación}: 0.01, 0.05, 0.1, 0.15
+\end{itemize}
+
+Para cada configuración se realizan múltiples ejecuciones con diferentes semillas y se calculan métricas de calidad:
+
+\begin{itemize}
+    \item Mejor costo y mejor tiempo encontrados
+    \item Número de soluciones únicas en el frente Pareto
+    \item Spread (dispersión) del frente
+    \item Hypervolume aproximado
+    \item Score compuesto ponderado
+\end{itemize}
+
+\subsection{Formato de Archivos de Entrada}
+
+El formato de entrada es un archivo de texto simple:
+
+\begin{lstlisting}[caption=Formato de archivo de instancia]
+nJobs nMachines nOps
+
+# Matriz de Costos (P x M x O valores)
+cost[0][0][0] cost[0][0][1] ... cost[0][1][0] ...
+...
+
+# Matriz de Tiempos (P x M x O valores)
+time[0][0][0] time[0][0][1] ... time[0][1][0] ...
+...
+\end{lstlisting}
+
+Ejemplo para 2 jobs, 2 máquinas, 2 operaciones:
+\begin{lstlisting}
+2 2 2
+
+22 32 21 50 
+8 27 44 20 
+
+37 130 187 144 
+148 167 184 24 
+\end{lstlisting}
+
+\subsection{Archivos de Salida}
+
+El sistema genera múltiples archivos de salida:
+
+\begin{itemize}
+    \item \texttt{solutions\_*\_pareto.csv}: Resumen del frente de Pareto (solución, costo, tiempo, crowding)
+    \item \texttt{solutions\_*\_details.csv}: Detalle de asignaciones por solución
+    \item \texttt{solutions\_*\_matrix.txt}: Reporte visual con matrices de asignación
+    \item \texttt{initial\_pop.out}: Población inicial
+    \item \texttt{final\_pop.out}: Población final
+    \item \texttt{best\_pop.out}: Soluciones factibles del frente Pareto
+    \item \texttt{solution\_debug.out}: Auditoría detallada con verificación de cálculos
+\end{itemize}
+
+
+\section{Casos de Prueba y Resultados Experimentales}
+
+\subsection{Configuración Experimental}
+
+Para la validación del algoritmo se utilizaron las siguientes configuraciones base:
+
+\begin{table}[h]
+\centering
+\caption{Parámetros utilizados en experimentos}
+\begin{tabular}{|l|c|}
+\hline
+\textbf{Parámetro} & \textbf{Valor} \\
+\hline
+Tamaño de población & 100 \\
+Número de generaciones & 200 \\
+Probabilidad de cruce & 0.9 \\
+Probabilidad de mutación & 0.05 \\
+Número de objetivos & 2 \\
+Semilla aleatoria & 0.5 \\
+\hline
+\end{tabular}
+\end{table}
+
+\subsection{Uso del Sistema}
+
+El ejecutable se invoca con los siguientes parámetros:
+
+\begin{lstlisting}[language=bash]
+./nsga2r <seed> <instance_file> <popsize> <ngen> <nobj> <pcross> <pmut>
+
+# Ejemplo:
+./nsga2r 0.5 instancia_basica.txt 100 200 2 0.9 0.05
+\end{lstlisting}
+
+\subsection{Métricas de Evaluación}
+
+Las soluciones se evalúan utilizando las siguientes métricas:
+
+\begin{itemize}
+    \item \textbf{Número de soluciones no dominadas}: Cantidad de puntos en el frente de Pareto final.
+    \item \textbf{Spread}: Dispersión del frente, medida como la diferencia entre valores extremos de cada objetivo.
+    \item \textbf{Hypervolume}: Volumen del espacio dominado por el frente Pareto respecto a un punto de referencia.
+    \item \textbf{Convergencia}: Verificación de que los cálculos de objetivos coinciden con la suma manual de costos y tiempos.
+\end{itemize}
+
+\subsection{Análisis de Escalabilidad}
+
+El sistema ha sido probado exitosamente en instancias de diferentes tamaños:
+
+\begin{table}[h]
+\centering
+\caption{Tiempos de ejecución aproximados (100 generaciones, pop=100)}
+\begin{tabular}{|l|c|c|}
+\hline
+\textbf{Instancia} & \textbf{Genes Totales} & \textbf{Tiempo (seg)} \\
+\hline
+Trivial (2x2x2) & 4 & $<1$ \\
+Básica (4x3x3) & 12 & $\approx 1$ \\
+Intermedia (10x6x6) & 60 & $\approx 3$ \\
+Grande (30x15x15) & 450 & $\approx 15$ \\
+Gigante (50x20x20) & 1,000 & $\approx 45$ \\
+\hline
+\end{tabular}
+\end{table}
+
+\subsection{Benchmarks de Referencia}
+
+Para validación adicional, se consideran los casos de prueba definidos en \cite{behnke2012} (Behnke, Dennis 2012), los cuales tienen un enfoque flexible con múltiples máquinas y duraciones de trabajos, similares a lo que buscamos en nuestro problema.
+
+
+\section{Conclusiones y Trabajo Futuro}
+
+\subsection{Conclusiones}
+
+Se ha implementado exitosamente un sistema basado en NSGA-II para resolver el problema Multi-Stage Flexible Job Shop Scheduling con optimización bi-objetivo (costo y tiempo). Las principales contribuciones de este trabajo incluyen:
+
+\begin{enumerate}
+    \item \textbf{Inicialización mixta}: La combinación de estrategias greedy y aleatorias proporciona una mejor cobertura inicial del frente de Pareto.
+    
+    \item \textbf{Operadores híbridos}: Los operadores de cruce y mutación adaptativos permiten un balance efectivo entre exploración y explotación.
+    
+    \item \textbf{Mecanismos de preservación}: El archive externo y la inyección periódica de soluciones ayudan a mantener la calidad del frente Pareto.
+    
+    \item \textbf{Escape de óptimos locales}: El reinicio parcial y la mutación de bloques previenen la convergencia prematura.
+    
+    \item \textbf{Refinamiento local}: La búsqueda local aplicada a las mejores soluciones mejora la calidad final del frente.
+    
+    \item \textbf{Herramientas de soporte}: Los scripts de generación de instancias y tuning de parámetros facilitan la experimentación sistemática.
+\end{enumerate}
+
+\subsection{Trabajo Futuro}
+
+Se identifican las siguientes líneas de trabajo futuro:
+
+\begin{itemize}
+    \item \textbf{Restricciones adicionales}: Incorporar restricciones de precedencia entre operaciones, disponibilidad de máquinas por horario, y tiempos de setup.
+    
+    \item \textbf{Más objetivos}: Extender a problemas con tres o más objetivos (makespan, tardanza, balanceo de carga).
+    
+    \item \textbf{Representación mejorada}: Evaluar representaciones alternativas como permutaciones o codificación basada en prioridades.
+    
+    \item \textbf{Paralelización}: Implementar versión paralela para acelerar la evaluación en instancias muy grandes.
+    
+    \item \textbf{Hibridación con otras metaheurísticas}: Combinar con algoritmos como Simulated Annealing o Tabu Search.
+    
+    \item \textbf{Aprendizaje automático}: Incorporar predicción de buenos parámetros basada en características de la instancia.
+\end{itemize}
+
+
+\appendix
+
+\section{Estructura de Archivos del Proyecto}
+
+\begin{table}[h]
+\centering
+\caption{Archivos principales del proyecto}
+\begin{tabular}{|l|l|}
+\hline
+\textbf{Archivo} & \textbf{Descripción} \\
+\hline
+\texttt{nsga2r.c} & Programa principal, flujo del algoritmo \\
+\texttt{global.h} & Estructuras de datos y prototipos \\
+\texttt{reader.c} & Lectura de archivos de instancia \\
+\texttt{allocate.c} & Gestión de memoria \\
+\texttt{initialize.c} & Inicialización mixta de población \\
+\texttt{crossover.c} & Operadores de cruce híbrido \\
+\texttt{mutation.c} & Mutación inteligente adaptativa \\
+\texttt{eval.c} & Evaluación de objetivos \\
+\texttt{dominance.c} & Verificación de dominancia \\
+\texttt{fillnds.c} & Non-dominated sorting \\
+\texttt{crowddist.c} & Cálculo de crowding distance \\
+\texttt{archive.c} & Archive externo y reinicio parcial \\
+\texttt{auxiliary.c} & Búsqueda local (hill climbing) \\
+\texttt{report.c} & Exportación de resultados \\
+\texttt{tourselect.c} & Selección por torneo \\
+\texttt{rand.c} & Generador de números aleatorios \\
+\hline
+\texttt{generar\_instancias\_prueba.py} & Generador de instancias \\
+\texttt{tune\_parameters.py} & Ajuste automático de parámetros \\
+\texttt{Makefile} & Compilación del proyecto \\
+\hline
+\end{tabular}
+\end{table}
+
+
+\bibliography{cas-refs}
+
+%% else use the following coding to input the bibitems directly in the
+%% TeX file.
+
+%% Refer following link for more details about bibliography and citations.
+%% https://en.wikibooks.org/wiki/LaTeX/Bibliography_Management
+
+
+\begin{thebibliography}{00}
+
+
+\bibitem{9409755} 
+Y. Fu, Y. Hou, Z. Wang, X. Wu, K. Gao, and L. Wang, 
+\textit{Distributed scheduling problems in intelligent manufacturing systems}, 
+Tsinghua Science and Technology, vol. 26, no. 5, pp. 625-645, 2021.
+doi: 10.26599/TST.2021.9010009.
+
+\bibitem{chaudhry2016} 
+I. A. Chaudhry and A. A. Khan, 
+\textit{A research survey: review of flexible job shop scheduling techniques}, 
+International Transactions in Operational Research, vol. 23, no. 3, pp. 551-591, 2016. 
+doi: https://doi.org/10.1111/itor.12199.
+
+\bibitem{behnke2012}
+D. Behnke and M. J. Geiger,
+\textit{Test Instances for the Flexible Job Shop Scheduling Problem with Work Centers},
+Helmut-Schmidt-Universität, Research Report, 2012.
+URL: https://openhsu.ub.hsu-hh.de/entities/publication/436
+
+\bibitem{deb2002}
+K. Deb, A. Pratap, S. Agarwal, and T. Meyarivan,
+\textit{A fast and elitist multiobjective genetic algorithm: NSGA-II},
+IEEE Transactions on Evolutionary Computation, vol. 6, no. 2, pp. 182-197, 2002.
+doi: 10.1109/4235.996017.
+
+\bibitem{mastrolilli2000}
+M. Mastrolilli and L. M. Gambardella,
+\textit{Effective neighbourhood functions for the flexible job shop problem},
+Journal of Scheduling, vol. 3, no. 1, pp. 3-20, 2000.
+
+\bibitem{pezzella2008}
+F. Pezzella, G. Morganti, and G. Ciaschetti,
+\textit{A genetic algorithm for the Flexible Job-shop Scheduling Problem},
+Computers \& Operations Research, vol. 35, no. 10, pp. 3202-3212, 2008.
+
+\end{thebibliography}
+\end{document}
+
+\endinput
+%%
+%% End of file

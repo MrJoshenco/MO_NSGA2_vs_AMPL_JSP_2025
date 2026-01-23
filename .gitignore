@@ -1,0 +1,63 @@
+# ===========================================
+# Archivos compilados
+# ===========================================
+build/*.o
+build/nsga2r
+
+# ===========================================
+# Archivos de salida del algoritmo (GRANDES)
+# ===========================================
+# Poblaciones - pueden ser muy grandes (>200MB)
+*.out
+all_pop.out
+best_pop.out
+final_pop.out
+initial_pop.out
+params.out
+solution_debug.out
+output/populations/*.out
+
+# Soluciones y matrices - pueden crecer mucho
+output/solutions/**/*.csv
+output/solutions/**/*.txt
+*_details.csv
+*_matrix.txt
+*_pareto.csv
+
+# ===========================================
+# Resultados de tuning (archivos grandes)
+# ===========================================
+tuning_results/*.json
+tuning_results/*.csv
+
+# ===========================================
+# Instancias muy grandes (opcional)
+# ===========================================
+# Descomenta si no quieres versionar instancias grandes
+# instances/gigante/
+# instances/otras/gran_instancia.*
+
+# ===========================================
+# Archivos temporales
+# ===========================================
+*.tmp
+*.log
+*~
+*.bak
+
+# ===========================================
+# Archivos del sistema
+# ===========================================
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ===========================================
+# IDEs y editores
+# ===========================================
+.vscode/
+.idea/
+*.swp
+*.swo
+*.sublime-*
+all_pop.out
