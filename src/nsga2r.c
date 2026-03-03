@@ -163,11 +163,11 @@ int main (int argc, char **argv)
     fflush(stdout);
 
     /* 5. Bucle Principal (Generaciones) */
-    /* Configuración de búsqueda local */
-    int local_search_interval = 10;      /* Aplicar cada N generaciones */
-    int local_search_count = popsize / 10;  /* Mejorar top 10% de soluciones */
-    if (local_search_count < 5) local_search_count = 5;
-    if (local_search_count > 20) local_search_count = 20;
+    /* Búsqueda local: solo ocasionalmente y a pocas soluciones para no sesgar */
+    int local_search_interval = 50;
+    int local_search_count = popsize / 20;
+    if (local_search_count < 2) local_search_count = 2;
+    if (local_search_count > 10) local_search_count = 10;
     
     for (i=2; i<=ngen; i++)
     {
@@ -203,13 +203,8 @@ int main (int argc, char **argv)
         printf("\n gen = %d",i);
     }
     
-    /* Búsqueda local final intensiva antes de reportar resultados */
-    printf("\n Aplicando busqueda local final...");
-    apply_local_search_to_best(parent_pop, popsize / 4);  /* Mejorar top 25% */
-    evaluate_pop(parent_pop);
-    assign_rank_and_crowding_distance(parent_pop);
-    
-    /* Actualizar archive con resultados finales */
+    /* Actualizar archive con resultados finales (sin local search intensiva
+       que destruiría la diversidad del frente Pareto) */
     update_archive(&best_archive, parent_pop);
     
     printf("\n Generations finished, now reporting solutions");

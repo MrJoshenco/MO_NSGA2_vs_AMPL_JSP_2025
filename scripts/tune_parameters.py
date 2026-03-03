@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
 """
 NSGA-II Parameter Tuning Script - VERSIÓN MEJORADA
-Prueba múltiples instancias y exporta resultados detallados a CSV/Excel.
+Prueba múltiples instancias (priorizando las más grandes) y exporta resultados
+a CSV, ranking ponderado por total_genes, e informe final en Markdown.
+Múltiples semillas por (instancia, configuración) para evaluar estabilidad.
 
-Uso:
-    python3 tune_parameters.py          # Búsqueda completa
-    python3 tune_parameters.py --quick  # Búsqueda rápida
+Uso (desde la raíz del proyecto):
+    python3 scripts/tune_parameters.py          # Búsqueda completa
+    python3 scripts/tune_parameters.py --quick  # Búsqueda rápida
 """
 
 import subprocess
@@ -14,6 +16,7 @@ import csv
 import itertools
 import json
 from datetime import datetime
+from pathlib import Path
 from statistics import mean, stdev
 import glob
 import sys
@@ -23,20 +26,24 @@ import time as time_module
 # CONFIGURACIÓN DEL EXPERIMENTO
 # ==========================================
 
-# Directorio de trabajo
+# Directorio del script (scripts/)
 WORK_DIR = os.path.dirname(os.path.abspath(__file__))
 
-# Detectar automáticamente todas las instancias .txt
-INSTANCE_PATTERN = "instancia*.txt"
+# Raíz del proyecto (parent de scripts/)
+PROJECT_ROOT = os.path.dirname(WORK_DIR)
+
+# Detectar automáticamente todas las instancias .txt (búsqueda recursiva en instances/)
+INSTANCES_DIR = os.path.join(PROJECT_ROOT, "instances")
+INSTANCE_PATTERN = "**/instancia*.txt"
 
 # Ejecutable
-EXECUTABLE = "./nsga2r"
+EXECUTABLE = os.path.join(PROJECT_ROOT, "build", "nsga2r")
 
-# Número de ejecuciones por configuración (para promediar)
+# Número de ejecuciones por configuración (para promediar); se sobreescribe con len(SEEDS)
 RUNS_PER_CONFIG = 3
 
-# Directorio para resultados
-RESULTS_DIR = "tuning_results"
+# Directorio para resultados (en raíz del proyecto)
+RESULTS_DIR = "results/tuning"
 
 # ==========================================
 # ESPACIO DE BÚSQUEDA DE PARÁMETROS
@@ -56,8 +63,8 @@ PARAM_GRID_QUICK = {
     "pmut": [0.05, 0.1],
 }
 
-# Semillas fijas para reproducibilidad
-SEEDS = [0.1, 0.3, 0.5, 0.7, 0.9]
+# Semillas fijas para reproducibilidad (múltiples para estabilidad)
+SEEDS = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
 
 
 # ==========================================
@@ -65,10 +72,20 @@ SEEDS = [0.1, 0.3, 0.5, 0.7, 0.9]
 # ==========================================
 
 def get_all_instances():
-    """Obtiene todas las instancias disponibles ordenadas por tamaño."""
-    instances = glob.glob(os.path.join(WORK_DIR, INSTANCE_PATTERN))
-    # Ordenar por tamaño de archivo (más pequeño primero)
-    instances.sort(key=lambda x: os.path.getsize(x))
+    """Obtiene todas las instancias disponibles ordenadas por tamaño de problema (mayor primero)."""
+    instances_dir = Path(INSTANCES_DIR)
+    if not instances_dir.exists():
+        return []
+    paths = list(instances_dir.rglob("instancia*.txt"))
+    instances = [str(p) for p in paths]
+    # Ordenar por total_genes descendente (instancias grandes primero); si no hay info, por size desc
+    def sort_key(path):
+        info = get_instance_info(path)
+        g = info.get("total_genes") or 0
+        if g > 0:
+            return (-g, 0)
+        return (0, -os.path.getsize(path))
+    instances.sort(key=sort_key)
     return instances
 
 
@@ -122,7 +139,7 @@ def run_nsga2(seed, instance, popsize, ngen, nobj, pcross, pmut):
             capture_output=True,
             text=True,
             timeout=600,  # 10 minutos máximo
-            cwd=WORK_DIR
+            cwd=PROJECT_ROOT
         )
         elapsed = time_module.time() - start_time
         return result.returncode == 0, elapsed
@@ -134,9 +151,9 @@ def run_nsga2(seed, instance, popsize, ngen, nobj, pcross, pmut):
 
 
 def parse_pareto_results(instance_path):
-    """Lee el archivo de resultados del frente de Pareto."""
+    """Lee el archivo de resultados del frente de Pareto (generado en cwd=PROJECT_ROOT)."""
     base_name = os.path.splitext(os.path.basename(instance_path))[0]
-    pareto_file = os.path.join(WORK_DIR, f"solutions_{base_name}_pareto.csv")
+    pareto_file = os.path.join(PROJECT_ROOT, "output", "solutions", f"solutions_{base_name}_pareto.csv")
     
     if not os.path.exists(pareto_file):
         return None
@@ -179,7 +196,7 @@ def calculate_metrics(solutions):
         "spread_time": max(times) - min(times),
     }
     
-    # Hypervolume aproximado
+    # Hypervolume aproximado (punto de referencia normalizado a 1.1 por eje)
     if metrics["spread_cost"] > 0 and metrics["spread_time"] > 0:
         norm_solutions = [
             ((c - metrics["best_cost"]) / metrics["spread_cost"],
@@ -189,18 +206,22 @@ def calculate_metrics(solutions):
         norm_solutions.sort(key=lambda x: x[0])
         
         hv = 0
-        ref_point = (1.1, 1.1)
+        norm_ref = (1.1, 1.1)
         prev_cost = 0
         for nc, nt in norm_solutions:
-            if nc < ref_point[0] and nt < ref_point[1]:
+            if nc < norm_ref[0] and nt < norm_ref[1]:
                 width = nc - prev_cost
-                height = ref_point[1] - nt
+                height = norm_ref[1] - nt
                 hv += width * height
                 prev_cost = nc
-        hv += (ref_point[0] - prev_cost) * ref_point[1]
+        hv += (norm_ref[0] - prev_cost) * norm_ref[1]
         metrics["hypervolume"] = hv
+        metrics["hv_ref_cost"] = metrics["best_cost"] + norm_ref[0] * metrics["spread_cost"]
+        metrics["hv_ref_time"] = metrics["best_time"] + norm_ref[1] * metrics["spread_time"]
     else:
         metrics["hypervolume"] = 0
+        metrics["hv_ref_cost"] = 0
+        metrics["hv_ref_time"] = 0
     
     return metrics
 
@@ -231,6 +252,56 @@ def calculate_composite_score(metrics, instance_info):
     return score
 
 
+def compute_weighted_global_ranking(all_results, instance_order=None):
+    """
+    Calcula el ranking global de configuraciones ponderando el score por total_genes
+    (priorizando instancias grandes). Retorna lista de dicts con config, score_ponderado, rank.
+    """
+    if instance_order is None:
+        instance_order = sorted(all_results.keys())
+    
+    # Pesos por instancia: peso_i = total_genes_i / sum(total_genes)
+    total_genes_sum = 0
+    instance_genes = {}
+    for name in instance_order:
+        results = all_results.get(name, [])
+        g = 0
+        if results:
+            g = results[0].get("instance_info", {}).get("total_genes") or 0
+        instance_genes[name] = max(g, 1)
+        total_genes_sum += instance_genes[name]
+    
+    weights = {name: instance_genes[name] / total_genes_sum for name in instance_order}
+    
+    # Por cada configuración (clave tuple), recoger score por instancia y calcular ponderado
+    config_scores = {}
+    for instance_name in instance_order:
+        for r in all_results.get(instance_name, []):
+            config = r.get("config", {})
+            key = (config.get("popsize"), config.get("ngen"), config.get("pcross"), config.get("pmut"))
+            if key not in config_scores:
+                config_scores[key] = {"config": config, "weighted_score": 0, "scores_by_instance": []}
+            s = r.get("score", 0)
+            config_scores[key]["weighted_score"] += s * weights[instance_name]
+            config_scores[key]["scores_by_instance"].append((instance_name, s))
+    
+    ranking = []
+    for key, data in config_scores.items():
+        ranking.append({
+            "popsize": key[0],
+            "ngen": key[1],
+            "pcross": key[2],
+            "pmut": key[3],
+            "config": data["config"],
+            "weighted_score": data["weighted_score"],
+            "num_instances": len(data["scores_by_instance"]),
+        })
+    ranking.sort(key=lambda x: x["weighted_score"], reverse=True)
+    for rank, p in enumerate(ranking, 1):
+        p["rank_global_ponderado"] = rank
+    return ranking, weights
+
+
 # ==========================================
 # EXPORTACIÓN DETALLADA A CSV
 # ==========================================
@@ -241,7 +312,7 @@ def export_detailed_csv(all_results, timestamp):
     Formato apto para Excel/Google Sheets.
     """
     
-    results_path = os.path.join(WORK_DIR, RESULTS_DIR)
+    results_path = os.path.join(PROJECT_ROOT, RESULTS_DIR)
     
     # === 1. ARCHIVO PRINCIPAL: Todos los resultados ===
     main_file = os.path.join(results_path, f"tuning_all_results_{timestamp}.csv")
@@ -275,6 +346,8 @@ def export_detailed_csv(all_results, timestamp):
             "Hypervolume",
             "Hypervolume_STD",
             "Score_Compuesto",
+            "Score_Compuesto_STD",
+            "Score_CV",
             "Rank_En_Instancia",
             "Tiempo_Ejecucion_Seg"
         ])
@@ -313,6 +386,8 @@ def export_detailed_csv(all_results, timestamp):
                     round(r.get("hypervolume", 0), 4),
                     round(r.get("hypervolume_std", 0), 4),
                     round(r.get("score", 0), 4),
+                    round(r.get("score_std", 0), 4),
+                    round(r.get("score_cv", 0), 4),
                     rank,
                     round(r.get("exec_time", 0), 2)
                 ])
@@ -368,8 +443,12 @@ def export_detailed_csv(all_results, timestamp):
     
     print(f"  [CSV] Mejor por instancia: {best_file}")
     
-    # === 3. ARCHIVO: Ranking global de parámetros ===
+    # === 3. ARCHIVO: Ranking global de parámetros (con score ponderado por instancias grandes) ===
     params_file = os.path.join(results_path, f"tuning_param_ranking_{timestamp}.csv")
+    
+    weighted_ranking, _ = compute_weighted_global_ranking(all_results)
+    # Map (popsize, ngen, pcross, pmut) -> weighted_score, rank_global_ponderado
+    weighted_by_key = {(p["popsize"], p["ngen"], p["pcross"], p["pmut"]): p for p in weighted_ranking}
     
     # Agregar scores por configuración de parámetros
     param_scores = {}
@@ -383,10 +462,10 @@ def export_detailed_csv(all_results, timestamp):
             param_scores[key]["scores"].append(r.get("score", 0))
             param_scores[key]["configs"].append(config)
     
-    # Calcular promedio de score por configuración
     param_ranking = []
     for key, data in param_scores.items():
         avg_score = mean(data["scores"]) if data["scores"] else 0
+        w = weighted_by_key.get(key, {})
         param_ranking.append({
             "popsize": key[0],
             "ngen": key[1],
@@ -394,34 +473,38 @@ def export_detailed_csv(all_results, timestamp):
             "pmut": key[3],
             "avg_score": avg_score,
             "num_instances": len(data["scores"]),
-            "score_std": stdev(data["scores"]) if len(data["scores"]) > 1 else 0
+            "score_std": stdev(data["scores"]) if len(data["scores"]) > 1 else 0,
+            "weighted_score": w.get("weighted_score", 0),
+            "rank_global_ponderado": w.get("rank_global_ponderado", 0),
         })
-    
-    param_ranking.sort(key=lambda x: x["avg_score"], reverse=True)
+    # Ordenar por score ponderado (configuración general recomendada primero)
+    param_ranking.sort(key=lambda x: x["weighted_score"], reverse=True)
     
     with open(params_file, 'w', newline='', encoding='utf-8') as f:
         writer = csv.writer(f, delimiter=',')
         
         writer.writerow([
-            "Rank_Global",
+            "Rank_Global_Ponderado",
             "Popsize",
             "Generaciones",
             "P_Cruce",
             "P_Mutacion",
             "Score_Promedio",
             "Score_STD",
+            "Score_Global_Ponderado",
             "Instancias_Probadas"
         ])
         
-        for rank, p in enumerate(param_ranking, 1):
+        for p in param_ranking:
             writer.writerow([
-                rank,
+                p["rank_global_ponderado"],
                 p["popsize"],
                 p["ngen"],
                 p["pcross"],
                 p["pmut"],
                 round(p["avg_score"], 4),
                 round(p["score_std"], 4),
+                round(p["weighted_score"], 4),
                 p["num_instances"]
             ])
     
@@ -442,16 +525,17 @@ def export_detailed_csv(all_results, timestamp):
         writer.writerow(["Ejecuciones por configuracion", RUNS_PER_CONFIG])
         writer.writerow([])
         
-        # Mejor configuración global
+        # Mejor configuración global (por score ponderado, priorizando instancias grandes)
         if param_ranking:
             best_global = param_ranking[0]
-            writer.writerow(["MEJOR CONFIGURACION GLOBAL"])
+            writer.writerow(["MEJOR CONFIGURACION GLOBAL (ponderada por total_genes)"])
             writer.writerow(["Parametro", "Valor"])
             writer.writerow(["Popsize", best_global["popsize"]])
             writer.writerow(["Generaciones", best_global["ngen"]])
             writer.writerow(["P_Cruce", best_global["pcross"]])
             writer.writerow(["P_Mutacion", best_global["pmut"]])
             writer.writerow(["Score Promedio", round(best_global["avg_score"], 4)])
+            writer.writerow(["Score Global Ponderado", round(best_global["weighted_score"], 4)])
     
     print(f"  [CSV] Resumen ejecutivo: {summary_file}")
     
@@ -460,7 +544,7 @@ def export_detailed_csv(all_results, timestamp):
 
 def export_json(all_results, timestamp):
     """Exporta todos los resultados en formato JSON."""
-    results_path = os.path.join(WORK_DIR, RESULTS_DIR)
+    results_path = os.path.join(PROJECT_ROOT, RESULTS_DIR)
     json_file = os.path.join(results_path, f"tuning_full_data_{timestamp}.json")
     
     with open(json_file, 'w', encoding='utf-8') as f:
@@ -468,6 +552,122 @@ def export_json(all_results, timestamp):
     
     print(f"  [JSON] Datos completos: {json_file}")
     return json_file
+
+
+def generate_informe_final(all_results, best_config, instance_order, timestamp, csv_files=None):
+    """
+    Genera un informe final en Markdown con objetivo, metodología, resultados
+    y recomendaciones. csv_files: dict con main_file, best_file, params_file, summary_file, json_file.
+    """
+    results_path = os.path.join(PROJECT_ROOT, RESULTS_DIR)
+    informe_file = os.path.join(results_path, f"informe_final_{timestamp}.md")
+    csv_files = csv_files or {}
+    
+    lines = []
+    lines.append("# Informe final: Sintonización de parámetros NSGA-II")
+    lines.append("")
+    lines.append(f"**Fecha:** {timestamp}")
+    lines.append("")
+    lines.append("## Objetivo")
+    lines.append("")
+    lines.append("Búsqueda de una **configuración general** de parámetros para NSGA-II que funcione bien en todas las instancias, priorizando las instancias más grandes. Evaluación de **estabilidad** mediante múltiples semillas por (instancia, configuración).")
+    lines.append("")
+    lines.append("## Metodología")
+    lines.append("")
+    lines.append(f"- **Semillas:** {len(SEEDS)} semillas fijas por (instancia, configuración): `{SEEDS}`")
+    lines.append("- **Criterio de score:** Score compuesto (best_cost, best_time, unique_solutions, hypervolume) normalizado por tamaño de instancia.")
+    lines.append("- **Configuración general:** Ranking por **score global ponderado**: peso de cada instancia proporcional a `total_genes` (instancias grandes cuentan más).")
+    lines.append("- **Estabilidad:** Se reporta media ± desviación estándar y coeficiente de variación (CV) del score entre semillas; CV > 0.2 indica menor estabilidad.")
+    lines.append("")
+    lines.append("## Instancias (ordenadas de mayor a menor tamaño)")
+    lines.append("")
+    lines.append("| Instancia | Jobs | Máquinas | Ops | Total genes |")
+    lines.append("|-----------|------|----------|-----|-------------|")
+    
+    for name in instance_order:
+        results = all_results.get(name, [])
+        if not results:
+            continue
+        info = results[0].get("instance_info", {})
+        lines.append(f"| {name} | {info.get('jobs', '')} | {info.get('machines', '')} | {info.get('ops', '')} | {info.get('total_genes', '')} |")
+    
+    lines.append("")
+    lines.append("## Mejor configuración general")
+    lines.append("")
+    if best_config:
+        cfg = best_config.get("config", best_config)
+        lines.append(f"- **popsize:** {cfg.get('popsize')}")
+        lines.append(f"- **ngen:** {cfg.get('ngen')}")
+        lines.append(f"- **pcross:** {cfg.get('pcross')}")
+        lines.append(f"- **pmut:** {cfg.get('pmut')}")
+        lines.append(f"- **Score global ponderado:** {best_config.get('weighted_score', 0):.4f}")
+        lines.append("")
+        lines.append("### Resultados por instancia (mejor configuración)")
+        lines.append("")
+        lines.append("| Instancia | Mejor costo (media ± std) | Mejor tiempo (media ± std) | Sol. únicas | Hypervolume | Score (media ± std) | CV score |")
+        lines.append("|-----------|---------------------------|-----------------------------|-------------|-------------|---------------------|----------|")
+        
+        for name in instance_order:
+            results = all_results.get(name, [])
+            r = None
+            for x in results:
+                c = x.get("config", {})
+                if (c.get("popsize"), c.get("ngen"), c.get("pcross"), c.get("pmut")) == (cfg.get("popsize"), cfg.get("ngen"), cfg.get("pcross"), cfg.get("pmut")):
+                    r = x
+                    break
+            if r is None:
+                continue
+            bc = r.get("best_cost", 0)
+            bcs = r.get("best_cost_std", 0)
+            bt = r.get("best_time", 0)
+            bts = r.get("best_time_std", 0)
+            uq = int(r.get("unique_solutions", 0))
+            hv = r.get("hypervolume", 0)
+            sc = r.get("score", 0)
+            scs = r.get("score_std", 0)
+            cv = r.get("score_cv", 0)
+            lines.append(f"| {name} | {bc:.1f} ± {bcs:.1f} | {bt:.1f} ± {bts:.1f} | {uq} | {hv:.4f} | {sc:.4f} ± {scs:.4f} | {cv:.4f} |")
+        
+        lines.append("")
+        lines.append("### Estabilidad")
+        lines.append("")
+        cvs = []
+        for name in instance_order:
+            results = all_results.get(name, [])
+            for x in results:
+                c = x.get("config", {})
+                if (c.get("popsize"), c.get("ngen"), c.get("pcross"), c.get("pmut")) == (cfg.get("popsize"), cfg.get("ngen"), cfg.get("pcross"), cfg.get("pmut")):
+                    cvs.append((name, x.get("score_cv", 0)))
+                    break
+        if cvs:
+            max_cv = max(cv for _, cv in cvs)
+            lines.append(f"El coeficiente de variación (CV) del score por instancia para la mejor configuración está entre 0 y {max_cv:.4f}. CV &lt; 0.2 se considera estable.")
+        lines.append("")
+        lines.append("## Recomendación")
+        lines.append("")
+        lines.append("Ejemplo de ejecución con la configuración recomendada:")
+        lines.append("")
+        lines.append("```bash")
+        lines.append(f"./build/nsga2r 0.5 <archivo_instancia> {cfg.get('popsize')} {cfg.get('ngen')} 2 {cfg.get('pcross')} {cfg.get('pmut')}")
+        lines.append("```")
+    else:
+        lines.append("No se obtuvo ninguna configuración válida.")
+    
+    lines.append("")
+    lines.append("## Archivos generados")
+    lines.append("")
+    for label, path in csv_files.items():
+        if path and os.path.isabs(path):
+            path = os.path.relpath(path, results_path)
+        lines.append(f"- **{label}:** `{path or '-'}`")
+    lines.append("")
+    
+    content = "\n".join(lines)
+    with open(informe_file, 'w', encoding='utf-8') as f:
+        f.write(content)
+    
+    print(f"  [Informe] {informe_file}")
+    return informe_file
 
 
 # ==========================================
@@ -481,7 +681,7 @@ def run_tuning(param_grid, runs_per_config):
     RUNS_PER_CONFIG = runs_per_config
     
     # Crear directorio de resultados
-    results_path = os.path.join(WORK_DIR, RESULTS_DIR)
+    results_path = os.path.join(PROJECT_ROOT, RESULTS_DIR)
     os.makedirs(results_path, exist_ok=True)
     
     # Obtener todas las instancias
@@ -490,6 +690,8 @@ def run_tuning(param_grid, runs_per_config):
     if not instances:
         print("ERROR: No se encontraron instancias (instancia*.txt)")
         return None
+    
+    instance_order = [get_instance_info(p)["name"] for p in instances]
     
     # Generar todas las combinaciones de parámetros
     param_names = list(param_grid.keys())
@@ -569,7 +771,7 @@ def run_tuning(param_grid, runs_per_config):
                 else:
                     print("FAILED")
             
-            # Promediar métricas de todas las ejecuciones
+            # Promediar métricas de todas las ejecuciones y calcular estabilidad (CV del score)
             if run_metrics:
                 avg_metrics = {}
                 for key in run_metrics[0].keys():
@@ -582,7 +784,11 @@ def run_tuning(param_grid, runs_per_config):
                 
                 avg_metrics["config"] = config
                 avg_metrics["instance_info"] = inst_info
-                avg_metrics["score"] = calculate_composite_score(avg_metrics, inst_info)
+                # Score por run para std y CV
+                run_scores = [calculate_composite_score(m, inst_info) for m in run_metrics]
+                avg_metrics["score"] = mean(run_scores)
+                avg_metrics["score_std"] = stdev(run_scores) if len(run_scores) > 1 else 0
+                avg_metrics["score_cv"] = (avg_metrics["score_std"] / abs(avg_metrics["score"])) if avg_metrics["score"] != 0 else 0
                 avg_metrics["exec_time"] = mean(exec_times) if exec_times else 0
                 
                 all_results[instance_name].append(avg_metrics)
@@ -597,29 +803,19 @@ def run_tuning(param_grid, runs_per_config):
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     
     export_detailed_csv(all_results, timestamp)
-    export_json(all_results, timestamp)
+    json_file = export_json(all_results, timestamp)
     
-    # Mostrar mejores configuraciones globales
+    # Ranking global ponderado (priorizando instancias grandes)
+    weighted_ranking, _ = compute_weighted_global_ranking(all_results, instance_order)
+    
+    # Mostrar mejores configuraciones globales (por score ponderado)
     print("\n" + "=" * 70)
-    print("TOP 5 MEJORES CONFIGURACIONES GLOBALES")
+    print("TOP 5 MEJORES CONFIGURACIONES GLOBALES (score ponderado por instancias grandes)")
     print("=" * 70)
     
-    # Calcular ranking global
-    param_scores = {}
-    for instance_name, results in all_results.items():
-        for r in results:
-            config = r.get("config", {})
-            key = f"pop={config['popsize']},gen={config['ngen']},pc={config['pcross']},pm={config['pmut']}"
-            if key not in param_scores:
-                param_scores[key] = []
-            param_scores[key].append(r.get("score", 0))
-    
-    global_ranking = [(k, mean(v)) for k, v in param_scores.items()]
-    global_ranking.sort(key=lambda x: x[1], reverse=True)
-    
-    for i, (config_str, avg_score) in enumerate(global_ranking[:5], 1):
-        print(f"\n#{i} Score promedio: {avg_score:.4f}")
-        print(f"   Configuración: {config_str}")
+    for i, p in enumerate(weighted_ranking[:5], 1):
+        print(f"\n#{i} Score ponderado: {p['weighted_score']:.4f}")
+        print(f"   Config: pop={p['popsize']}, gen={p['ngen']}, pc={p['pcross']}, pm={p['pmut']}")
     
     # Mostrar mejor por instancia
     print("\n" + "=" * 70)
@@ -638,9 +834,21 @@ def run_tuning(param_grid, runs_per_config):
             print(f"  Mejor Tiempo: {best['best_time']:.2f}")
             print(f"  Soluciones únicas: {best['unique_solutions']:.0f}")
     
+    # Generar informe final
+    results_path = os.path.join(PROJECT_ROOT, RESULTS_DIR)
+    best_config = weighted_ranking[0] if weighted_ranking else None
+    csv_files = {
+        "Todos los resultados": os.path.join(results_path, f"tuning_all_results_{timestamp}.csv"),
+        "Mejor por instancia": os.path.join(results_path, f"tuning_best_per_instance_{timestamp}.csv"),
+        "Ranking de parámetros": os.path.join(results_path, f"tuning_param_ranking_{timestamp}.csv"),
+        "Resumen ejecutivo": os.path.join(results_path, f"tuning_summary_{timestamp}.csv"),
+        "Datos completos (JSON)": json_file,
+    }
+    generate_informe_final(all_results, best_config, instance_order, timestamp, csv_files)
+    
     print("\n" + "=" * 70)
     print(f"TUNING COMPLETADO en {elapsed_total/60:.1f} minutos")
-    print(f"Resultados guardados en: {os.path.join(WORK_DIR, RESULTS_DIR)}/")
+    print(f"Resultados guardados en: {os.path.join(PROJECT_ROOT, RESULTS_DIR)}/")
     print("=" * 70)
     
     return all_results
@@ -651,11 +859,11 @@ def run_tuning(param_grid, runs_per_config):
 # ==========================================
 
 if __name__ == "__main__":
-    os.chdir(WORK_DIR)
+    os.chdir(PROJECT_ROOT)
     
     if len(sys.argv) > 1 and sys.argv[1] == "--quick":
         print("\n*** MODO RÁPIDO: Menos combinaciones, resultados más rápidos ***\n")
-        run_tuning(PARAM_GRID_QUICK, runs_per_config=2)
+        run_tuning(PARAM_GRID_QUICK, runs_per_config=len(SEEDS))
     else:
         print("\n*** MODO COMPLETO: Búsqueda exhaustiva (usar --quick para versión rápida) ***\n")
-        run_tuning(PARAM_GRID_FULL, runs_per_config=3)
+        run_tuning(PARAM_GRID_FULL, runs_per_config=len(SEEDS))

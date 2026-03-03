@@ -239,24 +239,24 @@ void check_and_partial_restart (population *pop, int generation)
         
         for (i = restart_start; i < popsize; i++)
         {
-            /* Mix of strategies for restart */
             double r = randomperc();
             
-            if (r < 0.25)
+            /* Mayoritariamente aleatorio para maximizar diversidad en el reinicio */
+            if (r < 0.10)
             {
                 initialize_ind_greedy_cost(&(pop->ind[i]));
             }
-            else if (r < 0.50)
+            else if (r < 0.20)
             {
                 initialize_ind_greedy_time(&(pop->ind[i]));
             }
-            else if (r < 0.75)
+            else if (r < 0.30)
             {
                 initialize_ind_greedy_balanced(&(pop->ind[i]));
             }
             else
             {
-                initialize_ind(&(pop->ind[i]));  /* Random */
+                initialize_ind(&(pop->ind[i]));
             }
             
             /* Evaluate the new individual */
