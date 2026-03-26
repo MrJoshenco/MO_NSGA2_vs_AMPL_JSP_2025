@@ -30,7 +30,7 @@ PMUT = 0.01
 
 # Rangos para Popsize y Ngen (múltiplos de 4)
 POP_MIN = 200
-POP_MAX = 4000
+POP_MAX = 200
 POP_STEP = 200
 
 NGEN_MIN = 200
