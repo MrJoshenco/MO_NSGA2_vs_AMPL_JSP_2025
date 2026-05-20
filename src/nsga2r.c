@@ -1,12 +1,21 @@
 /* NSGA-II routine (implementation of the 'main' function) */
 
+# define _POSIX_C_SOURCE 200809L
+
 # include <stdio.h>
 # include <stdlib.h>
 # include <math.h>
 # include <string.h>
 # include <unistd.h>
+# include <time.h>
 
 # include "global.h"
+
+static double timespec_elapsed_sec (const struct timespec *t0, const struct timespec *t1)
+{
+    return (double)(t1->tv_sec - t0->tv_sec)
+         + (double)(t1->tv_nsec - t0->tv_nsec) / 1e9;
+}
 # include "rand.h"
 
 /* Global variables declared in global.h are defined here */
@@ -41,6 +50,7 @@ int angle2;
 
 int enable_diversity = 1;
 int enable_preservation = 1;
+double nsga2_exec_time_sec = 0.0;
 
 /* Seed for random number generator */
 //double seed;
@@ -161,7 +171,12 @@ int main (int argc, char **argv)
         allocate_archive (&best_archive, 2 * popsize);
     }
 
-    /* 4. Inicialización */
+    /* 4. Inicialización (cronómetro: hasta fin de generaciones) */
+    {
+    struct timespec run_start, run_end;
+
+    clock_gettime(CLOCK_MONOTONIC, &run_start);
+
     randomize(); /* Inicializar generador random con la semilla */
     if (enable_diversity)
     {
@@ -226,6 +241,12 @@ int main (int argc, char **argv)
         fprintf(fpt4,"# gen = %d\n",i);
         report_pop(parent_pop,fpt4);
         printf("\n gen = %d",i);
+    }
+
+    clock_gettime(CLOCK_MONOTONIC, &run_end);
+    nsga2_exec_time_sec = timespec_elapsed_sec(&run_start, &run_end);
+    fprintf(fpt5, "\n nsga2_exec_time_sec = %.3f", nsga2_exec_time_sec);
+    printf("\n Tiempo de ejecucion NSGA-II: %.3f s", nsga2_exec_time_sec);
     }
     
     if (enable_preservation)

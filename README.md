@@ -29,17 +29,19 @@ make clean && make
 ./build/nsga2r <seed> <instancia> <popsize> <ngen> <nobj> <pcross> <pmut> [enable_diversity] [enable_preservation]
 ```
 
-| Parámetro | Descripción |
-|-----------|-------------|
-| `seed` | Semilla en `(0, 1)`, p. ej. `0.5` |
-| `instancia` | Ruta al `.txt` de la instancia |
-| `popsize` | Tamaño de población (≥ 4 y múltiplo de 4) |
-| `ngen` | Número de generaciones |
-| `nobj` | Objetivos (usar `2`) |
-| `pcross` | Probabilidad de cruce, p. ej. `0.9` |
-| `pmut` | Probabilidad de mutación, p. ej. `0.05` |
-| `enable_diversity` | Opcional: `1` (default) o `0` |
-| `enable_preservation` | Opcional: `1` (default) o `0` |
+
+| Parámetro             | Descripción                               |
+| --------------------- | ----------------------------------------- |
+| `seed`                | Semilla en `(0, 1)`, p. ej. `0.5`         |
+| `instancia`           | Ruta al `.txt` de la instancia            |
+| `popsize`             | Tamaño de población (≥ 4 y múltiplo de 4) |
+| `ngen`                | Número de generaciones                    |
+| `nobj`                | Objetivos (usar `2`)                      |
+| `pcross`              | Probabilidad de cruce, p. ej. `0.9`       |
+| `pmut`                | Probabilidad de mutación, p. ej. `0.05`   |
+| `enable_diversity`    | Opcional: `1` (default) o `0`             |
+| `enable_preservation` | Opcional: `1` (default) o `0`             |
+
 
 ### Ejemplo básico
 
@@ -49,12 +51,14 @@ make clean && make
 
 ### Switches de experimentación
 
-| `enable_diversity` | `enable_preservation` | Efecto |
-|--------------------|------------------------|--------|
-| `1` | `1` | Comportamiento completo (default) |
-| `0` | `1` | Sin reinicio parcial, sin penalizar duplicados en crowding, init aleatoria, sin búsqueda local ni mutación smart |
-| `1` | `0` | Sin archivo externo ni inyección periódica |
-| `0` | `0` | Ambos mecanismos desactivados |
+
+| `enable_diversity` | `enable_preservation` | Efecto                                                                                                           |
+| ------------------ | --------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| `1`                | `1`                   | Comportamiento completo (default)                                                                                |
+| `0`                | `1`                   | Sin reinicio parcial, sin penalizar duplicados en crowding, init aleatoria, sin búsqueda local ni mutación smart |
+| `1`                | `0`                   | Sin archivo externo ni inyección periódica                                                                       |
+| `0`                | `0`                   | Ambos mecanismos desactivados                                                                                    |
+
 
 ```bash
 # Sin mecanismos de diversidad extra
@@ -65,13 +69,15 @@ Los flags se registran en `params.out`.
 
 ## Salidas principales
 
-| Ubicación | Contenido |
-|-----------|-----------|
-| `params.out` | Parámetros de la corrida (incluye switches) |
-| `initial_pop.out`, `final_pop.out`, `all_pop.out` | Poblaciones |
-| `output/solutions/solutions_<instancia>_pareto.csv` | Frente de Pareto (costo, tiempo, crowding) |
-| `output/solutions/solutions_<instancia>_details.csv` | Asignaciones por solución |
-| `solution_debug.out` | Auditoría y archivo externo (si preservación activa) |
+
+| Ubicación                                            | Contenido                                            |
+| ---------------------------------------------------- | ---------------------------------------------------- |
+| `params.out`                                         | Parámetros de la corrida (incluye switches)          |
+| `initial_pop.out`, `final_pop.out`, `all_pop.out`    | Poblaciones                                          |
+| `output/solutions/solutions_<instancia>_pareto.csv`  | Frente de Pareto (costo, tiempo, crowding; tiempo de corrida en comentario `# exec_time_sec=...`) |
+| `output/solutions/solutions_<instancia>_details.csv` | Asignaciones por solución                            |
+| `solution_debug.out`                                 | Auditoría y archivo externo (si preservación activa) |
+
 
 ## Scripts Python (opcional)
 
@@ -101,3 +107,4 @@ Las instancias de prueba están en `instances/` (p. ej. `instances/basica/instan
 
 - Estructura del repo: [ESTRUCTURA.md](ESTRUCTURA.md)
 - Detalle del algoritmo: [docs/informe_proyecto.tex](docs/informe_proyecto.tex)
+

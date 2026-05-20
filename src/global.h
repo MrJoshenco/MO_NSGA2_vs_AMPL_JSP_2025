@@ -96,6 +96,9 @@ extern int angle2;
 extern int enable_diversity;     /* reinicio parcial, penalización duplicados, init mixta, búsqueda local */
 extern int enable_preservation;  /* archivo externo e inyección periódica */
 
+/* Tiempo de ejecución del NSGA-II (segundos), medido hasta fin de generaciones */
+extern double nsga2_exec_time_sec;
+
 /* Prototipos de funciones */
 void allocate_memory_pop (population *pop, int size);
 void allocate_memory_ind (individual *ind);

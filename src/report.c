@@ -175,15 +175,16 @@ void export_solutions_csv(population *pop, const char *instance_name)
     fprintf(fpt_summary, "# Instancia: %s\n", instance_name);
     fprintf(fpt_summary, "# Dimensiones: %d Jobs, %d Maquinas, %d Operaciones\n", nJobs, nMachines, nOps);
     fprintf(fpt_summary, "# seed=%.6f popsize=%d ngen=%d\n", seed, popsize, ngen);
+    fprintf(fpt_summary, "# exec_time_sec=%.3f\n", nsga2_exec_time_sec);
     fprintf(fpt_summary, "solucion,costo_total,tiempo_total,crowding_distance\n");
     
     solution_counter = 0;
     for (i = 0; i < popsize; i++) {
         if (pop->ind[i].rank == 1) {
             solution_counter++;
-            fprintf(fpt_summary, "%d,%.2f,%.2f,%.6f\n", 
-                    solution_counter, 
-                    pop->ind[i].obj[0], 
+            fprintf(fpt_summary, "%d,%.2f,%.2f,%.6f\n",
+                    solution_counter,
+                    pop->ind[i].obj[0],
                     pop->ind[i].obj[1],
                     pop->ind[i].crowd_dist);
         }

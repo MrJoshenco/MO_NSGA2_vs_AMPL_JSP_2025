@@ -12,7 +12,8 @@ Persistencia / append:
     agrega filas nuevas (soluciones únicas no vistas antes).
 
 Columnas en el CSV final:
-  Seed, Popsize, Ngen, Pcross, Pmut, Cost, Time, CrowdingDistance
+  Seed, Popsize, Ngen, Pcross, Pmut, Cost, Time, CrowdingDistance, ExecTimeSec
+  (ExecTimeSec = tiempo NSGA-II reportado en solutions_*_pareto.csv; si falta, wall-clock del subprocess)
 """
 
 from __future__ import annotations
@@ -23,7 +24,7 @@ import subprocess
 import sys
 import time as time_module
 from pathlib import Path
-from typing import Dict, List, Set, Tuple
+from typing import Dict, List, Optional, Set, Tuple
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import tune_parameters as tp
@@ -106,39 +107,43 @@ def pareto_csv_path(project_root: Path, instance_path: Path) -> Path:
     return project_root / "output" / "solutions" / f"solutions_{base}_pareto.csv"
 
 
-def parse_pareto_solutions(instance_path: Path, project_root: Path) -> List[Dict[str, str]]:
+def parse_pareto_file(
+    instance_path: Path, project_root: Path
+) -> Tuple[List[Dict[str, str]], Optional[float]]:
     """
-    Lee output/solutions/solutions_{base}_pareto.csv y retorna lista de soluciones.
+    Lee output/solutions/solutions_{base}_pareto.csv.
 
-    Cada solución retorna dict con:
-      - Cost (string con 2 decimales)
-      - Time (string con 2 decimales)
-      - CrowdingDistance (string)
+    Retorna (soluciones, exec_time_sec).
+    exec_time_sec se lee de la línea '# exec_time_sec=...' si existe.
     """
     path = pareto_csv_path(project_root, instance_path)
     if not path.exists():
-        return []
+        return [], None
 
     solutions: List[Dict[str, str]] = []
+    exec_time_sec: Optional[float] = None
+
     with open(path, "r", newline="", encoding="utf-8") as f:
         reader = csv.reader(f)
         for row in reader:
             if not row:
                 continue
-            if row[0].startswith("#"):
+            cell0 = row[0].strip()
+            if cell0.startswith("# exec_time_sec="):
+                try:
+                    exec_time_sec = float(cell0.split("=", 1)[1].strip())
+                except ValueError:
+                    pass
                 continue
-            # Cabecera (o fila especial)
-            if row[0] == "solucion":
+            if cell0.startswith("#"):
                 continue
-            # Esperado: solucion,costo_total,tiempo_total,crowding_distance
+            if cell0 == "solucion":
+                continue
             if len(row) < 4:
                 continue
-            cost_raw = row[1].strip()
-            time_raw = row[2].strip()
-            crowding_raw = row[3].strip()
             try:
-                cost_val = float(cost_raw)
-                time_val = float(time_raw)
+                cost_val = float(row[1].strip())
+                time_val = float(row[2].strip())
             except ValueError:
                 continue
 
@@ -146,11 +151,50 @@ def parse_pareto_solutions(instance_path: Path, project_root: Path) -> List[Dict
                 {
                     "Cost": f"{cost_val:.2f}",
                     "Time": f"{time_val:.2f}",
-                    "CrowdingDistance": crowding_raw,
+                    "CrowdingDistance": row[3].strip(),
                 }
             )
 
+    return solutions, exec_time_sec
+
+
+def parse_pareto_solutions(instance_path: Path, project_root: Path) -> List[Dict[str, str]]:
+    """Compat: solo la lista de soluciones."""
+    solutions, _ = parse_pareto_file(instance_path, project_root)
     return solutions
+
+
+FIELDNAMES = [
+    "Seed",
+    "Popsize",
+    "Ngen",
+    "Pcross",
+    "Pmut",
+    "Cost",
+    "Time",
+    "CrowdingDistance",
+    "ExecTimeSec",
+]
+
+
+def migrate_csv_columns(csv_path: Path, fieldnames: List[str]) -> None:
+    """Añade columnas faltantes (p. ej. ExecTimeSec) en un CSV ya existente."""
+    if not csv_path.exists():
+        return
+    with open(csv_path, "r", newline="", encoding="utf-8") as f:
+        reader = csv.DictReader(f)
+        old_fields = list(reader.fieldnames or [])
+        rows = list(reader)
+    if old_fields == fieldnames:
+        return
+    for r in rows:
+        for fn in fieldnames:
+            r.setdefault(fn, "")
+    with open(csv_path, "w", newline="", encoding="utf-8") as f:
+        w = csv.DictWriter(f, fieldnames=fieldnames, extrasaction="ignore")
+        w.writeheader()
+        for r in rows:
+            w.writerow({fn: r.get(fn, "") for fn in fieldnames})
 
 
 def read_existing_unique_keys(csv_path: Path) -> Set[Tuple[str, str]]:
@@ -226,7 +270,8 @@ def main() -> None:
         f"unique_solutions_{instance_base}_pop{POP_SIZE}_ngen{NGEN}_pc{pcross_s}_pm{pmut_s}.csv"
     )
 
-    fieldnames = ["Seed", "Popsize", "Ngen", "Pcross", "Pmut", "Cost", "Time", "CrowdingDistance"]
+    fieldnames = FIELDNAMES
+    migrate_csv_columns(csv_path, fieldnames)
 
     existing_keys = read_existing_unique_keys(csv_path)
     print("=" * 70)
@@ -258,10 +303,14 @@ def main() -> None:
             print(f"[seed={seed:.6f}] FALLÓ ({err}) after {elapsed:.1f}s", flush=True)
             continue
 
-        pareto_solutions = parse_pareto_solutions(instance_path, project_root)
+        pareto_solutions, exec_time_sec = parse_pareto_file(instance_path, project_root)
         if not pareto_solutions:
             print(f"[seed={seed:.6f}] Sin CSV Pareto o sin soluciones parseables.", flush=True)
             continue
+
+        if exec_time_sec is None:
+            exec_time_sec = elapsed
+        exec_time_str = f"{exec_time_sec:.3f}"
 
         # Deduplicación contra lo ya guardado (Cost,Time).
         rows_to_append: List[Dict[str, str]] = []
@@ -286,6 +335,7 @@ def main() -> None:
                     "Cost": cost,
                     "Time": time_val,
                     "CrowdingDistance": sol["CrowdingDistance"],
+                    "ExecTimeSec": exec_time_str,
                 }
             )
             existing_keys.add(key)
@@ -293,9 +343,17 @@ def main() -> None:
         if rows_to_append:
             append_rows(csv_path, rows_to_append, fieldnames=fieldnames)
             total_added += len(rows_to_append)
-            print(f"[seed={seed:.6f}] OK. Agregadas {len(rows_to_append)} nuevas soluciones.", flush=True)
+            print(
+                f"[seed={seed:.6f}] OK. Agregadas {len(rows_to_append)} nuevas soluciones. "
+                f"ExecTimeSec={exec_time_str} (wall {elapsed:.1f}s)",
+                flush=True,
+            )
         else:
-            print(f"[seed={seed:.6f}] OK. No hubo soluciones nuevas.", flush=True)
+            print(
+                f"[seed={seed:.6f}] OK. No hubo soluciones nuevas. "
+                f"ExecTimeSec={exec_time_str} (wall {elapsed:.1f}s)",
+                flush=True,
+            )
 
     print("=" * 70)
     print(f"Listo. Nuevas soluciones agregadas en esta ejecución: {total_added}")
