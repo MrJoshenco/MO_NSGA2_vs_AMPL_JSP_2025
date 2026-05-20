@@ -132,6 +132,10 @@ void assign_crowding_distance (population *pop, int *dist, int **obj_array, int 
     }
     
     /* MEJORA: Penalizar duplicados para promover diversidad */
+    if (!enable_diversity)
+    {
+        return;
+    }
     /* Individuos con objetivos idénticos reciben crowding_dist = 0 (excepto el primero) */
     for (j = 0; j < front_size; j++)
     {

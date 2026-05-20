@@ -119,9 +119,19 @@ def get_instance_info(instance_path):
     }
 
 
-def run_nsga2(seed, instance, popsize, ngen, nobj, pcross, pmut):
-    """Ejecuta el algoritmo NSGA-II con los parámetros dados."""
-    cmd = [
+def nsga2_cmd(
+    seed,
+    instance,
+    popsize,
+    ngen,
+    nobj,
+    pcross,
+    pmut,
+    enable_diversity=1,
+    enable_preservation=1,
+):
+    """Construye la línea de comando para nsga2r (switches opcionales al final)."""
+    return [
         EXECUTABLE,
         str(seed),
         instance,
@@ -129,8 +139,35 @@ def run_nsga2(seed, instance, popsize, ngen, nobj, pcross, pmut):
         str(ngen),
         str(nobj),
         str(pcross),
-        str(pmut)
+        str(pmut),
+        str(int(bool(enable_diversity))),
+        str(int(bool(enable_preservation))),
     ]
+
+
+def run_nsga2(
+    seed,
+    instance,
+    popsize,
+    ngen,
+    nobj,
+    pcross,
+    pmut,
+    enable_diversity=1,
+    enable_preservation=1,
+):
+    """Ejecuta el algoritmo NSGA-II con los parámetros dados."""
+    cmd = nsga2_cmd(
+        seed,
+        instance,
+        popsize,
+        ngen,
+        nobj,
+        pcross,
+        pmut,
+        enable_diversity=enable_diversity,
+        enable_preservation=enable_preservation,
+    )
     
     try:
         start_time = time_module.time()

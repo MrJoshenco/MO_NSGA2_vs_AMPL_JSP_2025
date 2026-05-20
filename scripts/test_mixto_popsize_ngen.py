@@ -57,16 +57,15 @@ CSV_FIELDNAMES = [
 
 def run_nsga2_with_timeout(seed, instance_path, popsize, ngen, pcross, pmut, timeout_sec=600):
     """Ejecuta NSGA-II con timeout. Retorna (success, elapsed, error_msg)."""
-    cmd = [
-        EXECUTABLE,
+    cmd = tp.nsga2_cmd(
         f"{seed:.6f}",
         str(instance_path),
-        str(popsize),
-        str(ngen),
-        "2",
-        str(pcross),
-        str(pmut),
-    ]
+        popsize,
+        ngen,
+        2,
+        pcross,
+        pmut,
+    )
     try:
         t0 = time_module.time()
         result = subprocess.run(

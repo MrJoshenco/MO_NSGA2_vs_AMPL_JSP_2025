@@ -19,6 +19,9 @@ from pathlib import Path
 # Raíz del proyecto
 SCRIPT_DIR = Path(__file__).resolve().parent
 PROJECT_ROOT = SCRIPT_DIR.parent
+sys.path.insert(0, str(SCRIPT_DIR))
+import tune_parameters as tp
+
 EXECUTABLE = PROJECT_ROOT / "build" / "nsga2r"
 INSTANCES_DIR = PROJECT_ROOT / "instances"
 
@@ -57,16 +60,15 @@ def get_largest_instances(n=3):
 
 def run_nsga2(instance_path, seed, timeout=600):
     """Ejecuta NSGA-II; instance_path es Path o str, seed en (0, 1)."""
-    cmd = [
-        str(EXECUTABLE),
+    cmd = tp.nsga2_cmd(
         f"{seed:.6f}",
         str(instance_path),
-        str(POPSIZE),
-        str(NGEN),
-        str(NOBJ),
-        str(PCROSS),
-        str(PMUT),
-    ]
+        POPSIZE,
+        NGEN,
+        NOBJ,
+        PCROSS,
+        PMUT,
+    )
     try:
         result = subprocess.run(
             cmd,

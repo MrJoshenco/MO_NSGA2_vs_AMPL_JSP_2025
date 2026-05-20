@@ -95,6 +95,22 @@ void initialize_pop (population *pop)
     return;
 }
 
+/* Población 100% aleatoria (sin estrategias greedy de diversidad inicial) */
+void initialize_pop_random (population *pop)
+{
+    int i;
+
+    validate_problem_dimensions();
+    printf("\n Inicializacion aleatoria: %d individuos", popsize);
+
+    for (i = 0; i < popsize; i++)
+    {
+        initialize_ind_random(&(pop->ind[i]));
+    }
+
+    return;
+}
+
 /* Wrapper para mantener compatibilidad */
 void initialize_ind (individual *ind)
 {

@@ -46,16 +46,15 @@ NOBJ = 2
 def run_nsga2(seed, instance_path, popsize, ngen, timeout_sec=300):
     """Ejecuta nsga2r. Retorna (success, elapsed_sec)."""
     instance_path = str(Path(instance_path).resolve() if not os.path.isabs(instance_path) else instance_path)
-    cmd = [
-        EXECUTABLE,
+    cmd = tp.nsga2_cmd(
         f"{seed:.6f}",
         instance_path,
-        str(popsize),
-        str(ngen),
-        str(NOBJ),
-        str(PCROSS),
-        str(PMUT),
-    ]
+        popsize,
+        ngen,
+        NOBJ,
+        PCROSS,
+        PMUT,
+    )
     try:
         t0 = time_module.time()
         result = subprocess.run(

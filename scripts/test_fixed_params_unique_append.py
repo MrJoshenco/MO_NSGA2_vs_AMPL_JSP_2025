@@ -25,6 +25,9 @@ import time as time_module
 from pathlib import Path
 from typing import Dict, List, Set, Tuple
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import tune_parameters as tp
+
 
 # ============================
 # PARAMETROS FIJOS (editar)
@@ -65,16 +68,16 @@ def run_nsga2_with_timeout(
     timeout_sec: int = 600,
 ) -> Tuple[bool, float, str | None]:
     """Ejecuta nsga2r y retorna (success, elapsed, error_msg)."""
-    cmd = [
-        str(executable),
+    cmd = tp.nsga2_cmd(
         f"{seed:.6f}",
         str(instance_path),
-        str(popsize),
-        str(ngen),
-        str(nobj),
-        str(pcross),
-        str(pmut),
-    ]
+        popsize,
+        ngen,
+        nobj,
+        pcross,
+        pmut,
+    )
+    cmd[0] = str(executable)
 
     try:
         t0 = time_module.time()

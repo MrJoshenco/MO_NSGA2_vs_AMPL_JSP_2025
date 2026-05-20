@@ -28,9 +28,7 @@ void mutation_pop (population *pop)
     int i;
     for (i = 0; i < popsize; i++)
     {
-        /* Alternar entre mutación inteligente y híbrida */
-        /* 50% inteligente (mejora dirigida), 50% híbrida (exploración) */
-        if (randomperc() <= PROB_SMART_MUTATION)
+        if (enable_diversity && randomperc() <= PROB_SMART_MUTATION)
         {
             scheduler_mutate_smart(&(pop->ind[i]));
         }
@@ -179,7 +177,7 @@ void mutate_single_gene_smart (individual *ind, int job, int op)
             best_score = current_score;
             best_machine = m;
         }
-        else if (randomperc() < 0.20)
+        else if (enable_diversity && randomperc() < 0.20)
         {
             best_machine = m;
             break;

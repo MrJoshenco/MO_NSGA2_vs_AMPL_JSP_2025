@@ -104,6 +104,8 @@ void update_archive (archive *arch, population *pop)
 {
     int i;
     int added = 0;
+
+    if (!enable_preservation) return;
     
     for (i = 0; i < popsize; i++)
     {
@@ -141,6 +143,8 @@ void inject_archive_to_pop (archive *arch, population *pop)
     int i, j;
     int num_to_inject;
     int target_idx;
+
+    if (!enable_preservation) return;
     
     if (arch->size == 0) return;
     
@@ -218,6 +222,8 @@ void check_and_partial_restart (population *pop, int generation)
     int i;
     int restart_start;
     double diversity_ratio;
+
+    if (!enable_diversity) return;
     
     /* Only check every 10 generations to avoid overhead */
     if (generation % 10 != 0) return;
