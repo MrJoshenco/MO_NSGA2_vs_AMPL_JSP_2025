@@ -55,7 +55,7 @@ def calcular_dominancia(df: pd.DataFrame) -> pd.Series:
 
 def cargar_ampl(path: str) -> pd.DataFrame:
     df = pd.read_csv(path)
-    df.columns = ["F1", "F2"]
+    df.columns = ["F1", "F2", "ExecTime"]
     return df.sort_values("F1").reset_index(drop=True)
 
 
@@ -176,7 +176,7 @@ def graficar(
     plt.close(fig)
 
 
-# ── Lote (5 instancias) ─────────────────────────────────────────────────────
+# ── Lote instancias ─────────────────────────────────────────────────────
 
 def _dir_script() -> Path:
     return Path(__file__).resolve().parent
@@ -213,13 +213,7 @@ BATCH_SPECS: list[tuple[str, str | None, str, str]] = [
         None,
         "unique_solutions_instancia_gigante_pop1000_ngen4000_pc0_9_pm0_01.csv",
         "Instancia gigante — frente NSGA-II",
-    ),
-    (
-        "mega_gigante",
-        None,
-        "unique_solutions_instancia_mega_gigante_pop1000_ngen4000_pc0_9_pm0_01.csv",
-        "Instancia gigante — frente NSGA-II",
-    ),
+    )
 ]
 
 

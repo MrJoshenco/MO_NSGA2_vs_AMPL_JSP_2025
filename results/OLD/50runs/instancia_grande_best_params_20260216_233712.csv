@@ -1,0 +1,2 @@
+Seed,Popsize,Ngen,Pcross,Pmut,BestCost,BestTime,UniqueSolutions,Hypervolume,Score,ExecTimeSec
+0.314542,200,400,0.95,0.01,3310.0,9478.0,132,1.0132,0.5049,2.92
