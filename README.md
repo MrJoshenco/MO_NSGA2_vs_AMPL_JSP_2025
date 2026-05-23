@@ -87,8 +87,6 @@ Desde la raíz:
 # Ajuste de parámetros
 python3 scripts/tune_parameters.py
 
-# 50 corridas por instancia
-python3 scripts/run_50_per_instance.py
 
 # Acumular soluciones únicas (parámetros fijos en el script)
 python3 scripts/test_fixed_params_unique_append.py --instance instances/basica/instancia_basica.txt
@@ -97,11 +95,45 @@ python3 scripts/test_fixed_params_unique_append.py --instance instances/basica/i
 python3 scripts/Comparativa\ Pareto/pareto_comparativa.py --batch
 ```
 
+`test_fixed_params_unique_append.py` acepta opciones adicionales:
+
+```bash
+python3 scripts/test_fixed_params_unique_append.py \
+  --instance instances/basica/instancia_basica.txt \
+  --enable-diversity 0 \
+  --enable-preservation 1 \
+  --timeout 600 \
+  -o results/unique_solutions_fixed_params
+```
+
+Parámetros fijos usados en el script (actualmente):
+- `popsize=1000`
+- `ngen=4000`
+- `pcross=0.9`
+- `pmut=0.01`
+- `nobj=2`
+
+Salida por defecto:
+- `results/unique_solutions_fixed_params/`
+- nombre de archivo: `unique_solutions_<instancia>_pop<POP_SIZE>_ngen<NGEN>_pc<PCROSS>_pm<PMUT>_div<enable_diversity>_pres<enable_preservation>.csv`
+
 Los scripts usan `build/nsga2r` y, por defecto, activan diversidad y preservación (`1 1`). En `scripts/tune_parameters.py` está la función `nsga2_cmd(..., enable_diversity=1, enable_preservation=1)` para otras combinaciones.
 
 ## Instancias
 
-Las instancias de prueba están en `instances/` (p. ej. `instances/basica/instancia_basica.txt`, `instances/trivial/instancia_trivial.txt`).
+Las instancias de prueba están en `instances/`. La estructura actual incluye carpetas como:
+
+- `instances/basica/instancia_basica.txt`
+- `instances/trivial/instancia_trivial.txt`
+- `instances/intermedia/instancia_intermedia.txt`
+- `instances/intermedia_grande/instancia_intermedia_grande.txt`
+- `instances/grande/instancia_grande.txt`
+- `instances/gigante/instancia_gigante.txt`
+- `instances/mega_gigante/instancia_mega_gigante.txt`
+- `instances/otras/gran_instancia.txt`
+- `instances/otras/S_instancia.txt`
+
+Usa la ruta completa del archivo `.txt` como valor de `--instance` para los scripts y para `build/nsga2r`.
 
 ## Más información
 

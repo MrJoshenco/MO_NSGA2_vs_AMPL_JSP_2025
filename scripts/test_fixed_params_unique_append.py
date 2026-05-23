@@ -38,6 +38,8 @@ NGEN = 4000
 PCROSS = 0.9
 PMUT = 0.01
 NOBJ = 2
+ENABLE_DIVERSITY = 0
+ENABLE_PRESERVATION = 0
 
 # Semilla(s) para esta ejecucion (edita este valor y/o la lista).
 SEED = 0.1
@@ -66,6 +68,8 @@ def run_nsga2_with_timeout(
     pcross: float,
     pmut: float,
     nobj: int = 2,
+    enable_diversity: int = ENABLE_DIVERSITY,
+    enable_preservation: int = ENABLE_PRESERVATION,
     timeout_sec: int = 600,
 ) -> Tuple[bool, float, str | None]:
     """Ejecuta nsga2r y retorna (success, elapsed, error_msg)."""
@@ -77,6 +81,8 @@ def run_nsga2_with_timeout(
         nobj,
         pcross,
         pmut,
+        enable_diversity=enable_diversity,
+        enable_preservation=enable_preservation,
     )
     cmd[0] = str(executable)
 
@@ -245,6 +251,20 @@ def main() -> None:
         default="results/unique_solutions_fixed_params",
         help="Carpeta de salida para el CSV acumulado (default: results/unique_solutions_fixed_params)",
     )
+    parser.add_argument(
+        "--enable-diversity",
+        type=int,
+        choices=[0, 1],
+        default=ENABLE_DIVERSITY,
+        help="Habilita diversidad en NSGA-II: 1=on, 0=off (default: 1)",
+    )
+    parser.add_argument(
+        "--enable-preservation",
+        type=int,
+        choices=[0, 1],
+        default=ENABLE_PRESERVATION,
+        help="Habilita preservación en NSGA-II: 1=on, 0=off (default: 1)",
+    )
     args = parser.parse_args()
 
     work_dir = Path(__file__).resolve().parent
@@ -267,7 +287,8 @@ def main() -> None:
     pmut_s = fmt_float_for_filename(float(PMUT))
     instance_base = instance_path.stem
     csv_path = output_dir / (
-        f"unique_solutions_{instance_base}_pop{POP_SIZE}_ngen{NGEN}_pc{pcross_s}_pm{pmut_s}.csv"
+        f"unique_solutions_{instance_base}_pop{POP_SIZE}_ngen{NGEN}_pc{pcross_s}_pm{pmut_s}"
+        f"_div{args.enable_diversity}_pres{args.enable_preservation}.csv"
     )
 
     fieldnames = FIELDNAMES
@@ -278,7 +299,10 @@ def main() -> None:
     print("NSGA-II FIXED PARAMS -> SOLUCIONES UNICAS (append)")
     print("=" * 70)
     print(f"Instancia: {instance_base}")
-    print(f"Params: popsize={POP_SIZE}, ngen={NGEN}, pcross={PCROSS}, pmut={PMUT}, nobj={NOBJ}")
+    print(
+        f"Params: popsize={POP_SIZE}, ngen={NGEN}, pcross={PCROSS}, pmut={PMUT}, "
+        f"nobj={NOBJ}, enable_diversity={args.enable_diversity}, enable_preservation={args.enable_preservation}"
+    )
     print(f"Semillas a ejecutar: {SEEDS}")
     print(f"CSV acumulado: {csv_path}")
     print(f"Soluciones únicas ya existentes: {len(existing_keys)}")
@@ -297,6 +321,8 @@ def main() -> None:
             pcross=float(PCROSS),
             pmut=float(PMUT),
             nobj=NOBJ,
+            enable_diversity=int(args.enable_diversity),
+            enable_preservation=int(args.enable_preservation),
             timeout_sec=int(args.timeout),
         )
         if not success:

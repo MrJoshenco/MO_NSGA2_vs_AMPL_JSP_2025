@@ -187,31 +187,36 @@ BATCH_SPECS: list[tuple[str, str | None, str, str]] = [
     (
         "basica",
         "pareto_gurobiBasica.csv",
-        "unique_solutions_instancia_basica_pop1000_ngen4000_pc0_9_pm0_01.csv",
+        #"unique_solutions_instancia_basica_pop1000_ngen4000_pc0_9_pm0_01_div0_pres0.csv",
+        "unique_solutions_instancia_basica_pop1000_ngen4000_pc0_9_pm0_01_div1_pres1.csv",
         "Instancia básica — Pareto AMPL/Gurobi vs NSGA-II",
     ),
     (
         "intermedia",
         "pareto_gurobiIntermedio.csv",
-        "unique_solutions_instancia_intermedia_pop1000_ngen4000_pc0_9_pm0_01.csv",
+        #"unique_solutions_instancia_intermedia_pop1000_ngen4000_pc0_9_pm0_01_div0_pres0.csv",
+        "unique_solutions_instancia_intermedia_pop1000_ngen4000_pc0_9_pm0_01_div1_pres1.csv",
         "Instancia intermedia — Pareto AMPL/Gurobi vs NSGA-II",
     ),
     (
         "intermedia_grande",
         "pareto_gurobiIntermedio_grande.csv",
-        "unique_solutions_instancia_intermedia_grande_pop1000_ngen4000_pc0_9_pm0_01.csv",
+        #"unique_solutions_instancia_intermedia_grande_pop1000_ngen4000_pc0_9_pm0_01_div0_pres0.csv",
+        "unique_solutions_instancia_intermedia_grande_pop1000_ngen4000_pc0_9_pm0_01_div1_pres1.csv",
         "Instancia intermedia grande — Pareto AMPL/Gurobi vs NSGA-II",
     ),
     (
         "grande",
         "pareto_gurobiGrande.csv",
-        "unique_solutions_instancia_grande_pop1000_ngen4000_pc0_9_pm0_01.csv",
+        #"unique_solutions_instancia_grande_pop1000_ngen4000_pc0_9_pm0_01_div0_pres0.csv",
+        "unique_solutions_instancia_grande_pop1000_ngen4000_pc0_9_pm0_01_div1_pres1.csv",
         "Instancia grande — Pareto AMPL/Gurobi vs NSGA-II",
     ),
     (
         "gigante",
         None,
-        "unique_solutions_instancia_gigante_pop1000_ngen4000_pc0_9_pm0_01.csv",
+        #"unique_solutions_instancia_gigante_pop1000_ngen4000_pc0_9_pm0_01_div0_pres0.csv",
+        "unique_solutions_instancia_gigante_pop1000_ngen4000_pc0_9_pm0_01_div1_pres1.csv",
         "Instancia gigante — frente NSGA-II",
     )
 ]
