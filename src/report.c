@@ -3,9 +3,12 @@
 # include <stdio.h>
 # include <stdlib.h>
 # include <math.h>
+# include <sys/stat.h>
 
 # include "global.h"
 # include "rand.h"
+
+# define SOLUTIONS_DIR "output/solutions"
 
 /* Function to print the information of a population in a file */
 void report_pop (population *pop, FILE *fpt)
@@ -153,29 +156,35 @@ void export_solutions_csv(population *pop, const char *instance_name)
     int i, j, k, m;
     double calc_cost, calc_time;
     int solution_counter = 0;
-    char filename[256];
+    char filename[512];
     FILE *fpt_summary, *fpt_details, *fpt_matrix;
-    
+
+    /* Crear directorio de salida si no existe (ignorar si ya existe) */
+    mkdir("output", 0755);
+    mkdir(SOLUTIONS_DIR, 0755);
+
     /* Contar soluciones Pareto */
     for (i = 0; i < popsize; i++) {
         if (pop->ind[i].rank == 1) solution_counter++;
     }
     
     /* 1. Archivo resumen del frente de Pareto */
-    sprintf(filename, "solutions_%s_pareto.csv", instance_name);
+    sprintf(filename, "%s/solutions_%s_pareto.csv", SOLUTIONS_DIR, instance_name);
     fpt_summary = fopen(filename, "w");
     fprintf(fpt_summary, "# FRENTE DE PARETO - %d soluciones optimas\n", solution_counter);
     fprintf(fpt_summary, "# Instancia: %s\n", instance_name);
     fprintf(fpt_summary, "# Dimensiones: %d Jobs, %d Maquinas, %d Operaciones\n", nJobs, nMachines, nOps);
+    fprintf(fpt_summary, "# seed=%.6f popsize=%d ngen=%d\n", seed, popsize, ngen);
+    fprintf(fpt_summary, "# exec_time_sec=%.3f\n", nsga2_exec_time_sec);
     fprintf(fpt_summary, "solucion,costo_total,tiempo_total,crowding_distance\n");
     
     solution_counter = 0;
     for (i = 0; i < popsize; i++) {
         if (pop->ind[i].rank == 1) {
             solution_counter++;
-            fprintf(fpt_summary, "%d,%.2f,%.2f,%.6f\n", 
-                    solution_counter, 
-                    pop->ind[i].obj[0], 
+            fprintf(fpt_summary, "%d,%.2f,%.2f,%.6f\n",
+                    solution_counter,
+                    pop->ind[i].obj[0],
                     pop->ind[i].obj[1],
                     pop->ind[i].crowd_dist);
         }
@@ -184,7 +193,7 @@ void export_solutions_csv(population *pop, const char *instance_name)
     printf("\n   Exportado: %s", filename);
     
     /* 2. Archivo con detalle de asignaciones */
-    sprintf(filename, "solutions_%s_details.csv", instance_name);
+    sprintf(filename, "%s/solutions_%s_details.csv", SOLUTIONS_DIR, instance_name);
     fpt_details = fopen(filename, "w");
     fprintf(fpt_details, "solucion,job,operacion,maquina_asignada,costo,tiempo\n");
     
@@ -210,7 +219,7 @@ void export_solutions_csv(population *pop, const char *instance_name)
     printf("\n   Exportado: %s", filename);
     
     /* 3. Archivo con matriz de asignación (formato legible) */
-    sprintf(filename, "solutions_%s_matrix.txt", instance_name);
+    sprintf(filename, "%s/solutions_%s_matrix.txt", SOLUTIONS_DIR, instance_name);
     fpt_matrix = fopen(filename, "w");
     
     fprintf(fpt_matrix, "================================================================================\n");

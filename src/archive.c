@@ -104,6 +104,8 @@ void update_archive (archive *arch, population *pop)
 {
     int i;
     int added = 0;
+
+    if (!enable_preservation) return;
     
     for (i = 0; i < popsize; i++)
     {
@@ -141,6 +143,8 @@ void inject_archive_to_pop (archive *arch, population *pop)
     int i, j;
     int num_to_inject;
     int target_idx;
+
+    if (!enable_preservation) return;
     
     if (arch->size == 0) return;
     
@@ -218,6 +222,8 @@ void check_and_partial_restart (population *pop, int generation)
     int i;
     int restart_start;
     double diversity_ratio;
+
+    if (!enable_diversity) return;
     
     /* Only check every 10 generations to avoid overhead */
     if (generation % 10 != 0) return;
@@ -239,24 +245,24 @@ void check_and_partial_restart (population *pop, int generation)
         
         for (i = restart_start; i < popsize; i++)
         {
-            /* Mix of strategies for restart */
             double r = randomperc();
             
-            if (r < 0.25)
+            /* Mayoritariamente aleatorio para maximizar diversidad en el reinicio */
+            if (r < 0.10)
             {
                 initialize_ind_greedy_cost(&(pop->ind[i]));
             }
-            else if (r < 0.50)
+            else if (r < 0.20)
             {
                 initialize_ind_greedy_time(&(pop->ind[i]));
             }
-            else if (r < 0.75)
+            else if (r < 0.30)
             {
                 initialize_ind_greedy_balanced(&(pop->ind[i]));
             }
             else
             {
-                initialize_ind(&(pop->ind[i]));  /* Random */
+                initialize_ind(&(pop->ind[i]));
             }
             
             /* Evaluate the new individual */

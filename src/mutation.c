@@ -19,7 +19,7 @@ void mutate_entire_job (individual *ind, int job);
 #define PROB_BLOCK_MUTATION 0.05     /* Probabilidad de mutar un job completo */
 #define MIN_PMUT 0.001               /* Probabilidad mínima de mutación por gen */
 #define MAX_PMUT 0.3                 /* Probabilidad máxima de mutación por gen */
-#define PROB_SMART_MUTATION 0.5      /* Probabilidad de usar mutación inteligente */
+#define PROB_SMART_MUTATION 0.2      /* Reducido de 0.5: demasiada smart mutation sesga la búsqueda */
 
 
 /* Function to perform mutation in a population - INTELLIGENT VERSION */
@@ -28,9 +28,7 @@ void mutation_pop (population *pop)
     int i;
     for (i = 0; i < popsize; i++)
     {
-        /* Alternar entre mutación inteligente y híbrida */
-        /* 50% inteligente (mejora dirigida), 50% híbrida (exploración) */
-        if (randomperc() <= PROB_SMART_MUTATION)
+        if (enable_diversity && randomperc() <= PROB_SMART_MUTATION)
         {
             scheduler_mutate_smart(&(pop->ind[i]));
         }
@@ -102,18 +100,15 @@ void scheduler_mutate_hybrid (individual *ind)
     
     total_genes = nJobs * nOps;
     
-    /* Calcular probabilidad adaptativa para ~TARGET_FINE_MUTATIONS mutaciones */
+    /* Usar el máximo entre la tasa adaptativa y la especificada por el usuario */
     pmut_fine = TARGET_FINE_MUTATIONS / (double)total_genes;
     
-    /* Aplicar límites de seguridad */
     if (pmut_fine < MIN_PMUT) pmut_fine = MIN_PMUT;
     if (pmut_fine > MAX_PMUT) pmut_fine = MAX_PMUT;
     
-    /* También considerar el pmut_bin del usuario como factor */
-    /* Si el usuario especificó pmut mayor, usamos un promedio ponderado */
     if (pmut_bin > pmut_fine)
     {
-        pmut_fine = 0.7 * pmut_fine + 0.3 * pmut_bin;
+        pmut_fine = pmut_bin;
     }
     
     /* Aplicar mutación fina gen por gen */
@@ -163,15 +158,13 @@ void mutate_single_gene_smart (individual *ind, int job, int op)
     current_machine = ind->gene[job][op];
     best_machine = current_machine;
     
-    /* Pesos aleatorios para variar el enfoque (costo vs tiempo) */
-    weight_cost = 0.3 + randomperc() * 0.4;  /* Entre 0.3 y 0.7 */
+    /* Rango amplio de pesos para explorar todo el frente Pareto */
+    weight_cost = randomperc();
     weight_time = 1.0 - weight_cost;
     
-    /* Score actual */
     best_score = weight_cost * ProcessingCost[job][current_machine][op] + 
                  weight_time * ProcessingTime[job][current_machine][op];
     
-    /* Buscar mejor máquina */
     for (m = 0; m < nMachines; m++)
     {
         if (m == current_machine) continue;
@@ -179,17 +172,15 @@ void mutate_single_gene_smart (individual *ind, int job, int op)
         current_score = weight_cost * ProcessingCost[job][m][op] + 
                        weight_time * ProcessingTime[job][m][op];
         
-        /* Aceptar si es mejor */
         if (current_score < best_score)
         {
             best_score = current_score;
             best_machine = m;
         }
-        /* O aceptar con pequeña probabilidad si es peor (diversidad) */
-        else if (randomperc() < 0.05)
+        else if (enable_diversity && randomperc() < 0.20)
         {
             best_machine = m;
-            break;  /* Solo aceptar una opción peor máximo */
+            break;
         }
     }
     
@@ -208,17 +199,14 @@ void scheduler_mutate_smart (individual *ind)
     
     total_genes = nJobs * nOps;
     
-    /* Probabilidad adaptativa - mutación inteligente es más efectiva,
-       así que podemos usar tasa ligeramente mayor */
     pmut_smart = (TARGET_FINE_MUTATIONS * 1.5) / (double)total_genes;
     
     if (pmut_smart < MIN_PMUT) pmut_smart = MIN_PMUT;
     if (pmut_smart > MAX_PMUT) pmut_smart = MAX_PMUT;
     
-    /* Considerar pmut_bin del usuario */
     if (pmut_bin > pmut_smart)
     {
-        pmut_smart = 0.6 * pmut_smart + 0.4 * pmut_bin;
+        pmut_smart = pmut_bin;
     }
     
     /* Aplicar mutación inteligente gen por gen */

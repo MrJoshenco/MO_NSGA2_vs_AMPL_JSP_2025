@@ -1,12 +1,21 @@
 /* NSGA-II routine (implementation of the 'main' function) */
 
+# define _POSIX_C_SOURCE 200809L
+
 # include <stdio.h>
 # include <stdlib.h>
 # include <math.h>
 # include <string.h>
 # include <unistd.h>
+# include <time.h>
 
 # include "global.h"
+
+static double timespec_elapsed_sec (const struct timespec *t0, const struct timespec *t1)
+{
+    return (double)(t1->tv_sec - t0->tv_sec)
+         + (double)(t1->tv_nsec - t0->tv_nsec) / 1e9;
+}
 # include "rand.h"
 
 /* Global variables declared in global.h are defined here */
@@ -39,6 +48,10 @@ int obj3;
 int angle1;
 int angle2;
 
+int enable_diversity = 1;
+int enable_preservation = 1;
+double nsga2_exec_time_sec = 0.0;
+
 /* Seed for random number generator */
 //double seed;
 
@@ -59,11 +72,14 @@ int main (int argc, char **argv)
     /* Archive externo para guardar las mejores soluciones */
     archive best_archive;
 
-    /* Argumentos: ./nsga2r seed input_file pop_size n_gen n_obj p_cross p_mut */
+    /* Argumentos: ./nsga2r seed input_file popsize ngen nobj pcross pmut [enable_diversity] [enable_preservation] */
     if (argc < 8)
     {
-        printf("\n Usage: ./nsga2r random_seed input_file popsize ngen nobj pcross pmut\n");
+        printf("\n Usage: ./nsga2r random_seed input_file popsize ngen nobj pcross pmut [enable_diversity] [enable_preservation]\n");
+        printf("   enable_diversity:     1=on (default), 0=off (reinicio, dup. crowding, init mixta, búsqueda local)\n");
+        printf("   enable_preservation:  1=on (default), 0=off (archivo externo e inyección)\n");
         printf(" Example: ./nsga2r 0.5 multijobv2S.dat 100 200 2 0.9 0.05\n");
+        printf(" Example: ./nsga2r 0.5 instancia_basica.txt 100 200 2 0.9 0.05 0 1\n");
         exit(1);
     }
 
@@ -114,6 +130,9 @@ int main (int argc, char **argv)
     /* Parametros de probabilidad */
     pcross_bin = atof (argv[6]); /* Reutilizamos variable para probabilidad de cruce general */
     pmut_bin = atof (argv[7]);   /* Reutilizamos variable para probabilidad de mutacion general */
+
+    enable_diversity = (argc >= 9) ? (atoi(argv[8]) != 0) : 1;
+    enable_preservation = (argc >= 10) ? (atoi(argv[9]) != 0) : 1;
     
     /* Configuración interna para NSGA-II */
     nreal = 0; /* No usamos reales */
@@ -128,6 +147,10 @@ int main (int argc, char **argv)
     fprintf(fpt5,"\n Probability of crossover = %e",pcross_bin);
     fprintf(fpt5,"\n Probability of mutation = %e",pmut_bin);
     fprintf(fpt5,"\n Seed = %e",seed);
+    fprintf(fpt5,"\n enable_diversity = %d", enable_diversity);
+    fprintf(fpt5,"\n enable_preservation = %d", enable_preservation);
+    printf("\n enable_diversity = %d, enable_preservation = %d\n",
+           enable_diversity, enable_preservation);
     
     /* Inicializar contadores */
     nbincross = 0;
@@ -142,12 +165,27 @@ int main (int argc, char **argv)
     allocate_memory_pop (child_pop, popsize);
     allocate_memory_pop (mixed_pop, 2*popsize);
     
-    /* Asignar memoria para archive externo (capacidad = 2x popsize) */
-    allocate_archive (&best_archive, 2 * popsize);
+    /* Asignar memoria para archive externo (solo si preservación activa) */
+    if (enable_preservation)
+    {
+        allocate_archive (&best_archive, 2 * popsize);
+    }
 
-    /* 4. Inicialización */
+    /* 4. Inicialización (cronómetro: hasta fin de generaciones) */
+    {
+    struct timespec run_start, run_end;
+
+    clock_gettime(CLOCK_MONOTONIC, &run_start);
+
     randomize(); /* Inicializar generador random con la semilla */
-    initialize_pop_mixed (parent_pop);  /* Usar inicialización mixta mejorada */
+    if (enable_diversity)
+    {
+        initialize_pop_mixed (parent_pop);
+    }
+    else
+    {
+        initialize_pop_random (parent_pop);
+    }
     
     printf("\n Initialization done, now performing first generation\n");
     /* decode_pop ya no es necesario, trabajamos directo con enteros */
@@ -163,11 +201,11 @@ int main (int argc, char **argv)
     fflush(stdout);
 
     /* 5. Bucle Principal (Generaciones) */
-    /* Configuración de búsqueda local */
-    int local_search_interval = 10;      /* Aplicar cada N generaciones */
-    int local_search_count = popsize / 10;  /* Mejorar top 10% de soluciones */
-    if (local_search_count < 5) local_search_count = 5;
-    if (local_search_count > 20) local_search_count = 20;
+    /* Búsqueda local: solo ocasionalmente y a pocas soluciones para no sesgar */
+    int local_search_interval = 50;
+    int local_search_count = popsize / 20;
+    if (local_search_count < 2) local_search_count = 2;
+    if (local_search_count > 10) local_search_count = 10;
     
     for (i=2; i<=ngen; i++)
     {
@@ -177,22 +215,24 @@ int main (int argc, char **argv)
         merge (parent_pop, child_pop, mixed_pop);
         fill_nondominated_sort (mixed_pop, parent_pop);
         
-        /* ARCHIVE: Actualizar con las mejores soluciones encontradas */
-        update_archive(&best_archive, parent_pop);
-        
-        /* REINICIO PARCIAL: Verificar convergencia y reiniciar si es necesario */
-        check_and_partial_restart(parent_pop, i);
-        
-        /* BÚSQUEDA LOCAL: Aplicar periódicamente a las mejores soluciones */
-        if (i % local_search_interval == 0)
+        if (enable_preservation)
         {
-            apply_local_search_to_best(parent_pop, local_search_count);
-            evaluate_pop(parent_pop);  /* Re-evaluar después de búsqueda local */
-            assign_rank_and_crowding_distance(parent_pop);  /* Re-calcular ranks */
+            update_archive(&best_archive, parent_pop);
         }
         
-        /* Inyectar soluciones del archive de vuelta a la población (cada 25 gen) */
-        if (i % 25 == 0 && best_archive.size > 0)
+        if (enable_diversity)
+        {
+            check_and_partial_restart(parent_pop, i);
+        }
+        
+        if (enable_diversity && i % local_search_interval == 0)
+        {
+            apply_local_search_to_best(parent_pop, local_search_count);
+            evaluate_pop(parent_pop);
+            assign_rank_and_crowding_distance(parent_pop);
+        }
+        
+        if (enable_preservation && i % 25 == 0 && best_archive.size > 0)
         {
             inject_archive_to_pop(&best_archive, parent_pop);
         }
@@ -202,23 +242,27 @@ int main (int argc, char **argv)
         report_pop(parent_pop,fpt4);
         printf("\n gen = %d",i);
     }
+
+    clock_gettime(CLOCK_MONOTONIC, &run_end);
+    nsga2_exec_time_sec = timespec_elapsed_sec(&run_start, &run_end);
+    fprintf(fpt5, "\n nsga2_exec_time_sec = %.3f", nsga2_exec_time_sec);
+    printf("\n Tiempo de ejecucion NSGA-II: %.3f s", nsga2_exec_time_sec);
+    }
     
-    /* Búsqueda local final intensiva antes de reportar resultados */
-    printf("\n Aplicando busqueda local final...");
-    apply_local_search_to_best(parent_pop, popsize / 4);  /* Mejorar top 25% */
-    evaluate_pop(parent_pop);
-    assign_rank_and_crowding_distance(parent_pop);
-    
-    /* Actualizar archive con resultados finales */
-    update_archive(&best_archive, parent_pop);
+    if (enable_preservation)
+    {
+        update_archive(&best_archive, parent_pop);
+    }
     
     printf("\n Generations finished, now reporting solutions");
     report_pop(parent_pop,fpt2);
     report_feasible(parent_pop,fpt3);
     
-    /* Reportar contenido del archive */
-    printf("\n Archive externo contiene %d soluciones no-dominadas", best_archive.size);
-    report_archive(&best_archive, fpt_debug);
+    if (enable_preservation)
+    {
+        printf("\n Archive externo contiene %d soluciones no-dominadas", best_archive.size);
+        report_archive(&best_archive, fpt_debug);
+    }
     
     printf("\n Generando reporte de auditoria detallado en 'solution_debug.out'...");
     report_detailed_debug(parent_pop, fpt_debug);
@@ -249,8 +293,10 @@ int main (int argc, char **argv)
     deallocate_memory_pop (child_pop, popsize);
     deallocate_memory_pop (mixed_pop, 2*popsize);
     
-    /* Liberar archive externo */
-    deallocate_archive(&best_archive);
+    if (enable_preservation)
+    {
+        deallocate_archive(&best_archive);
+    }
     
     free (parent_pop);
     free (child_pop);

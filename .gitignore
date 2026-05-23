@@ -25,10 +25,12 @@ output/solutions/**/*.txt
 *_pareto.csv
 
 # ===========================================
-# Resultados de tuning (archivos grandes)
+# Resultados de experimentos (archivos grandes)
 # ===========================================
-tuning_results/*.json
-tuning_results/*.csv
+results/tuning/*.json
+results/tuning/*.csv
+results/50runs/*.csv
+results/testeo_*/*.csv
 
 # ===========================================
 # Instancias muy grandes (opcional)
@@ -51,6 +53,13 @@ tuning_results/*.csv
 .DS_Store
 Thumbs.db
 desktop.ini
+
+# ===========================================
+# Python
+# ===========================================
+scripts/__pycache__/
+__pycache__/
+*.pyc
 
 # ===========================================
 # IDEs y editores
