@@ -93,8 +93,9 @@ extern int angle1;
 extern int angle2;
 
 /* Switches de experimentación (1=activo, 0=desactivado; default 1) */
-extern int enable_diversity;     /* reinicio parcial, penalización duplicados, init mixta, búsqueda local */
-extern int enable_preservation;  /* archivo externo e inyección periódica */
+extern int enable_diversity;         /* init mixta, mutación smart, penalización duplicados, búsqueda local */
+extern int enable_partial_restart;   /* reinicio parcial por convergencia prematura */
+extern int enable_preservation;      /* archivo externo e inyección periódica */
 
 /* Tiempo de ejecución del NSGA-II (segundos), medido hasta fin de generaciones */
 extern double nsga2_exec_time_sec;

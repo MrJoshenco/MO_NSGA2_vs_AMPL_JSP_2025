@@ -26,21 +26,22 @@ make clean && make
 **Siempre desde la raíz del proyecto** (`MO/`), porque las salidas se escriben en `./` y en `output/solutions/`.
 
 ```bash
-./build/nsga2r <seed> <instancia> <popsize> <ngen> <nobj> <pcross> <pmut> [enable_diversity] [enable_preservation]
+./build/nsga2r <seed> <instancia> <popsize> <ngen> <nobj> <pcross> <pmut> [enable_diversity] [enable_partial_restart] [enable_preservation]
 ```
 
 
-| Parámetro             | Descripción                               |
-| --------------------- | ----------------------------------------- |
-| `seed`                | Semilla en `(0, 1)`, p. ej. `0.5`         |
-| `instancia`           | Ruta al `.txt` de la instancia            |
-| `popsize`             | Tamaño de población (≥ 4 y múltiplo de 4) |
-| `ngen`                | Número de generaciones                    |
-| `nobj`                | Objetivos (usar `2`)                      |
-| `pcross`              | Probabilidad de cruce, p. ej. `0.9`       |
-| `pmut`                | Probabilidad de mutación, p. ej. `0.05`   |
-| `enable_diversity`    | Opcional: `1` (default) o `0`             |
-| `enable_preservation` | Opcional: `1` (default) o `0`             |
+| Parámetro                  | Descripción                               |
+| -------------------------- | ----------------------------------------- |
+| `seed`                     | Semilla en `(0, 1)`, p. ej. `0.5`         |
+| `instancia`                | Ruta al `.txt` de la instancia            |
+| `popsize`                  | Tamaño de población (≥ 4 y múltiplo de 4) |
+| `ngen`                     | Número de generaciones                    |
+| `nobj`                     | Objetivos (usar `2`)                      |
+| `pcross`                   | Probabilidad de cruce, p. ej. `0.9`       |
+| `pmut`                     | Probabilidad de mutación, p. ej. `0.05`   |
+| `enable_diversity`         | Opcional: `1` (default) o `0`             |
+| `enable_partial_restart`   | Opcional: `1` (default) o `0`             |
+| `enable_preservation`      | Opcional: `1` (default) o `0`             |
 
 
 ### Ejemplo básico
@@ -51,18 +52,26 @@ make clean && make
 
 ### Switches de experimentación
 
+| Flag | Controla |
+| ---- | -------- |
+| `enable_diversity` | Init mixta, mutación smart, penalización de duplicados en crowding, búsqueda local |
+| `enable_partial_restart` | Reinicio parcial por convergencia prematura |
+| `enable_preservation` | Archivo externo e inyección periódica |
 
-| `enable_diversity` | `enable_preservation` | Efecto                                                                                                           |
-| ------------------ | --------------------- | ---------------------------------------------------------------------------------------------------------------- |
-| `1`                | `1`                   | Comportamiento completo (default)                                                                                |
-| `0`                | `1`                   | Sin reinicio parcial, sin penalizar duplicados en crowding, init aleatoria, sin búsqueda local ni mutación smart |
-| `1`                | `0`                   | Sin archivo externo ni inyección periódica                                                                       |
-| `0`                | `0`                   | Ambos mecanismos desactivados                                                                                    |
-
+| `div` | `prest` | `pres` | Efecto |
+| ----- | ------- | ------ | ------ |
+| `1` | `1` | `1` | Comportamiento completo (default) |
+| `0` | `1` | `1` | Init aleatoria, sin mutación smart, sin crowding extra, sin búsqueda local; con reinicio parcial y preservación |
+| `1` | `0` | `1` | Sin reinicio parcial |
+| `1` | `1` | `0` | Sin archivo externo ni inyección |
+| `0` | `0` | `0` | Solo NSGA-II base (cruce, mutación híbrida, selección) |
 
 ```bash
-# Sin mecanismos de diversidad extra
-./build/nsga2r 0.5 instances/basica/instancia_basica.txt 100 200 2 0.9 0.05 0 1
+# Sin diversidad extra, con reinicio parcial y preservación
+./build/nsga2r 0.5 instances/basica/instancia_basica.txt 100 200 2 0.9 0.05 0 1 1
+
+# Con diversidad, sin reinicio parcial
+./build/nsga2r 0.5 instances/basica/instancia_basica.txt 100 200 2 0.9 0.05 1 0 1
 ```
 
 Los flags se registran en `params.out`.
@@ -101,6 +110,7 @@ python3 scripts/Comparativa\ Pareto/pareto_comparativa.py --batch
 python3 scripts/test_fixed_params_unique_append.py \
   --instance instances/basica/instancia_basica.txt \
   --enable-diversity 0 \
+  --enable-partial-restart 1 \
   --enable-preservation 1 \
   --timeout 600 \
   -o results/unique_solutions_fixed_params
@@ -115,9 +125,9 @@ Parámetros fijos usados en el script (actualmente):
 
 Salida por defecto:
 - `results/unique_solutions_fixed_params/`
-- nombre de archivo: `unique_solutions_<instancia>_pop<POP_SIZE>_ngen<NGEN>_pc<PCROSS>_pm<PMUT>_div<enable_diversity>_pres<enable_preservation>.csv`
+- nombre de archivo: `unique_solutions_<instancia>_pop<POP_SIZE>_ngen<NGEN>_pc<PCROSS>_pm<PMUT>_div<enable_diversity>_prest<enable_partial_restart>_pres<enable_preservation>.csv`
 
-Los scripts usan `build/nsga2r` y, por defecto, activan diversidad y preservación (`1 1`). En `scripts/tune_parameters.py` está la función `nsga2_cmd(..., enable_diversity=1, enable_preservation=1)` para otras combinaciones.
+Los scripts usan `build/nsga2r` y, por defecto, activan los tres switches (`1 1 1`). En `scripts/tune_parameters.py` está la función `nsga2_cmd(..., enable_diversity=1, enable_partial_restart=1, enable_preservation=1)` para otras combinaciones.
 
 ## Instancias
 

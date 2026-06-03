@@ -38,8 +38,9 @@ NGEN = 4000
 PCROSS = 0.9
 PMUT = 0.01
 NOBJ = 2
-ENABLE_DIVERSITY = 0
-ENABLE_PRESERVATION = 0
+ENABLE_DIVERSITY = 1
+ENABLE_PARTIAL_RESTART = 1
+ENABLE_PRESERVATION = 1
 
 # Semilla(s) para esta ejecucion (edita este valor y/o la lista).
 SEED = 0.1
@@ -69,6 +70,7 @@ def run_nsga2_with_timeout(
     pmut: float,
     nobj: int = 2,
     enable_diversity: int = ENABLE_DIVERSITY,
+    enable_partial_restart: int = ENABLE_PARTIAL_RESTART,
     enable_preservation: int = ENABLE_PRESERVATION,
     timeout_sec: int = 600,
 ) -> Tuple[bool, float, str | None]:
@@ -82,6 +84,7 @@ def run_nsga2_with_timeout(
         pcross,
         pmut,
         enable_diversity=enable_diversity,
+        enable_partial_restart=enable_partial_restart,
         enable_preservation=enable_preservation,
     )
     cmd[0] = str(executable)
@@ -256,14 +259,21 @@ def main() -> None:
         type=int,
         choices=[0, 1],
         default=ENABLE_DIVERSITY,
-        help="Habilita diversidad en NSGA-II: 1=on, 0=off (default: 1)",
+        help="Init mixta, mutación smart, crowding y búsqueda local: 1=on, 0=off",
+    )
+    parser.add_argument(
+        "--enable-partial-restart",
+        type=int,
+        choices=[0, 1],
+        default=ENABLE_PARTIAL_RESTART,
+        help="Reinicio parcial por convergencia: 1=on, 0=off",
     )
     parser.add_argument(
         "--enable-preservation",
         type=int,
         choices=[0, 1],
         default=ENABLE_PRESERVATION,
-        help="Habilita preservación en NSGA-II: 1=on, 0=off (default: 1)",
+        help="Archivo externo e inyección periódica: 1=on, 0=off",
     )
     args = parser.parse_args()
 
@@ -288,7 +298,7 @@ def main() -> None:
     instance_base = instance_path.stem
     csv_path = output_dir / (
         f"unique_solutions_{instance_base}_pop{POP_SIZE}_ngen{NGEN}_pc{pcross_s}_pm{pmut_s}"
-        f"_div{args.enable_diversity}_pres{args.enable_preservation}.csv"
+        f"_div{args.enable_diversity}_prest{args.enable_partial_restart}_pres{args.enable_preservation}.csv"
     )
 
     fieldnames = FIELDNAMES
@@ -301,7 +311,8 @@ def main() -> None:
     print(f"Instancia: {instance_base}")
     print(
         f"Params: popsize={POP_SIZE}, ngen={NGEN}, pcross={PCROSS}, pmut={PMUT}, "
-        f"nobj={NOBJ}, enable_diversity={args.enable_diversity}, enable_preservation={args.enable_preservation}"
+        f"nobj={NOBJ}, enable_diversity={args.enable_diversity}, "
+        f"enable_partial_restart={args.enable_partial_restart}, enable_preservation={args.enable_preservation}"
     )
     print(f"Semillas a ejecutar: {SEEDS}")
     print(f"CSV acumulado: {csv_path}")
@@ -322,6 +333,7 @@ def main() -> None:
             pmut=float(PMUT),
             nobj=NOBJ,
             enable_diversity=int(args.enable_diversity),
+            enable_partial_restart=int(args.enable_partial_restart),
             enable_preservation=int(args.enable_preservation),
             timeout_sec=int(args.timeout),
         )

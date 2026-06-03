@@ -49,6 +49,7 @@ int angle1;
 int angle2;
 
 int enable_diversity = 1;
+int enable_partial_restart = 1;
 int enable_preservation = 1;
 double nsga2_exec_time_sec = 0.0;
 
@@ -72,14 +73,15 @@ int main (int argc, char **argv)
     /* Archive externo para guardar las mejores soluciones */
     archive best_archive;
 
-    /* Argumentos: ./nsga2r seed input_file popsize ngen nobj pcross pmut [enable_diversity] [enable_preservation] */
+    /* Argumentos: ./nsga2r seed input_file popsize ngen nobj pcross pmut [enable_diversity] [enable_partial_restart] [enable_preservation] */
     if (argc < 8)
     {
-        printf("\n Usage: ./nsga2r random_seed input_file popsize ngen nobj pcross pmut [enable_diversity] [enable_preservation]\n");
-        printf("   enable_diversity:     1=on (default), 0=off (reinicio, dup. crowding, init mixta, búsqueda local)\n");
-        printf("   enable_preservation:  1=on (default), 0=off (archivo externo e inyección)\n");
+        printf("\n Usage: ./nsga2r random_seed input_file popsize ngen nobj pcross pmut [enable_diversity] [enable_partial_restart] [enable_preservation]\n");
+        printf("   enable_diversity:        1=on (default), 0=off (init mixta, mutación smart, dup. crowding, búsqueda local)\n");
+        printf("   enable_partial_restart:  1=on (default), 0=off (reinicio parcial por convergencia)\n");
+        printf("   enable_preservation:     1=on (default), 0=off (archivo externo e inyección)\n");
         printf(" Example: ./nsga2r 0.5 multijobv2S.dat 100 200 2 0.9 0.05\n");
-        printf(" Example: ./nsga2r 0.5 instancia_basica.txt 100 200 2 0.9 0.05 0 1\n");
+        printf(" Example: ./nsga2r 0.5 instancia_basica.txt 100 200 2 0.9 0.05 0 1 1\n");
         exit(1);
     }
 
@@ -132,7 +134,8 @@ int main (int argc, char **argv)
     pmut_bin = atof (argv[7]);   /* Reutilizamos variable para probabilidad de mutacion general */
 
     enable_diversity = (argc >= 9) ? (atoi(argv[8]) != 0) : 1;
-    enable_preservation = (argc >= 10) ? (atoi(argv[9]) != 0) : 1;
+    enable_partial_restart = (argc >= 10) ? (atoi(argv[9]) != 0) : 1;
+    enable_preservation = (argc >= 11) ? (atoi(argv[10]) != 0) : 1;
     
     /* Configuración interna para NSGA-II */
     nreal = 0; /* No usamos reales */
@@ -148,9 +151,10 @@ int main (int argc, char **argv)
     fprintf(fpt5,"\n Probability of mutation = %e",pmut_bin);
     fprintf(fpt5,"\n Seed = %e",seed);
     fprintf(fpt5,"\n enable_diversity = %d", enable_diversity);
+    fprintf(fpt5,"\n enable_partial_restart = %d", enable_partial_restart);
     fprintf(fpt5,"\n enable_preservation = %d", enable_preservation);
-    printf("\n enable_diversity = %d, enable_preservation = %d\n",
-           enable_diversity, enable_preservation);
+    printf("\n enable_diversity = %d, enable_partial_restart = %d, enable_preservation = %d\n",
+           enable_diversity, enable_partial_restart, enable_preservation);
     
     /* Inicializar contadores */
     nbincross = 0;
@@ -220,7 +224,7 @@ int main (int argc, char **argv)
             update_archive(&best_archive, parent_pop);
         }
         
-        if (enable_diversity)
+        if (enable_partial_restart)
         {
             check_and_partial_restart(parent_pop, i);
         }
