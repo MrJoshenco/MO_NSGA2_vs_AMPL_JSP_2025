@@ -223,7 +223,7 @@ void check_and_partial_restart (population *pop, int generation)
     int restart_start;
     double diversity_ratio;
 
-    if (!enable_diversity) return;
+    if (!enable_partial_restart) return;
     
     /* Only check every 10 generations to avoid overhead */
     if (generation % 10 != 0) return;

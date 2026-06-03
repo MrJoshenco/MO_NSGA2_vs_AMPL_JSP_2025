@@ -128,6 +128,7 @@ def nsga2_cmd(
     pcross,
     pmut,
     enable_diversity=1,
+    enable_partial_restart=1,
     enable_preservation=1,
 ):
     """Construye la línea de comando para nsga2r (switches opcionales al final)."""
@@ -141,6 +142,7 @@ def nsga2_cmd(
         str(pcross),
         str(pmut),
         str(int(bool(enable_diversity))),
+        str(int(bool(enable_partial_restart))),
         str(int(bool(enable_preservation))),
     ]
 
@@ -154,6 +156,7 @@ def run_nsga2(
     pcross,
     pmut,
     enable_diversity=1,
+    enable_partial_restart=1,
     enable_preservation=1,
 ):
     """Ejecuta el algoritmo NSGA-II con los parámetros dados."""
@@ -166,6 +169,7 @@ def run_nsga2(
         pcross,
         pmut,
         enable_diversity=enable_diversity,
+        enable_partial_restart=enable_partial_restart,
         enable_preservation=enable_preservation,
     )
     
