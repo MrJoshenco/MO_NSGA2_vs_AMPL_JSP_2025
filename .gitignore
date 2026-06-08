@@ -18,17 +18,22 @@ solution_debug.out
 output/populations/*.out
 
 # Soluciones y matrices - pueden crecer mucho
-output/solutions/**/*.csv
-output/solutions/**/*.txt
-*_details.csv
-*_matrix.txt
-*_pareto.csv
+#output/solutions/**/*.csv
+#output/solutions/**/*.txt
+output/solutions/Resultados OLD/**/*.txt
+output/solutions/Resultados OLD/**/*.csv
+
+#_details.csv
+#_matrix.txt
+#_pareto.csv
 
 # ===========================================
-# Resultados de tuning (archivos grandes)
+# Resultados de experimentos (archivos grandes)
 # ===========================================
-tuning_results/*.json
-tuning_results/*.csv
+results/tuning/*.json
+results/tuning/*.csv
+results/50runs/*.csv
+results/testeo_*/*.csv
 
 # ===========================================
 # Instancias muy grandes (opcional)
@@ -51,6 +56,13 @@ tuning_results/*.csv
 .DS_Store
 Thumbs.db
 desktop.ini
+
+# ===========================================
+# Python
+# ===========================================
+scripts/__pycache__/
+__pycache__/
+*.pyc
 
 # ===========================================
 # IDEs y editores
