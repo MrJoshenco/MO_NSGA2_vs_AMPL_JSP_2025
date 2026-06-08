@@ -9,39 +9,41 @@ import os
 
 # Configuración de las instancias
 INSTANCIAS = [
+    
+    # {
+    #     "nombre": "instancia_trivial",
+    #     "jobs": 2,
+    #     "machines": 2,
+    #     "ops": 2,
+    #     "descripcion": "Casi trivial (2x2x2 = 8 asignaciones)"
+    # },
+    # {
+    #     "nombre": "instancia_basica",
+    #     "jobs": 4,
+    #     "machines": 3,
+    #     "ops": 3,
+    #     "descripcion": "Básica (4x3x3 = 36 asignaciones)"
+    # },
+    # {
+    #     "nombre": "instancia_intermedia",
+    #     "jobs": 10,
+    #     "machines": 6,
+    #     "ops": 6,
+    #     "descripcion": "Intermedia (10x6x6 = 360 asignaciones)"
+    # },
+    # {
+    #     "nombre": "instancia_grande",
+    #     "jobs": 30,
+    #     "machines": 15,
+    #     "ops": 15,
+    #     "descripcion": "Grande (30x15x15 = 6,750 asignaciones)"
+    # },
+
     {
-        "nombre": "instancia_trivial",
-        "jobs": 2,
-        "machines": 2,
-        "ops": 2,
-        "descripcion": "Casi trivial (2x2x2 = 8 asignaciones)"
-    },
-    {
-        "nombre": "instancia_basica",
-        "jobs": 4,
-        "machines": 3,
-        "ops": 3,
-        "descripcion": "Básica (4x3x3 = 36 asignaciones)"
-    },
-    {
-        "nombre": "instancia_intermedia",
-        "jobs": 10,
-        "machines": 6,
-        "ops": 6,
-        "descripcion": "Intermedia (10x6x6 = 360 asignaciones)"
-    },
-    {
-        "nombre": "instancia_grande",
-        "jobs": 30,
-        "machines": 15,
-        "ops": 15,
-        "descripcion": "Grande (30x15x15 = 6,750 asignaciones)"
-    },
-    {
-        "nombre": "instancia_gigante",
-        "jobs": 50,
-        "machines": 20,
-        "ops": 20,
+        "nombre": "instancia_mega_gigante",
+        "jobs": 100,
+        "machines": 30,
+        "ops": 25,
         "descripcion": "Gigante (50x20x20 = 20,000 asignaciones)"
     }
 ]

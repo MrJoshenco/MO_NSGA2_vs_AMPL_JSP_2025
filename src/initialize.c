@@ -57,11 +57,10 @@ void initialize_pop (population *pop)
     
     validate_problem_dimensions();
     
-    /* Calcular límites para cada tipo de inicialización */
-    greedy_cost_end = popsize / 5;           /* 20% */
-    greedy_time_end = 2 * popsize / 5;       /* 20% más */
-    greedy_balanced_end = 3 * popsize / 5;   /* 20% más */
-    /* El resto (40%) será aleatorio */
+    /* 10% greedy-costo, 10% greedy-tiempo, 10% greedy-balanceado, 70% aleatorio */
+    greedy_cost_end = popsize / 10;
+    greedy_time_end = 2 * popsize / 10;
+    greedy_balanced_end = 3 * popsize / 10;
     
     printf("\n Inicializacion mixta: %d greedy-costo, %d greedy-tiempo, %d greedy-balanceado, %d aleatorio",
            greedy_cost_end, 
@@ -96,6 +95,22 @@ void initialize_pop (population *pop)
     return;
 }
 
+/* Población 100% aleatoria (sin estrategias greedy de diversidad inicial) */
+void initialize_pop_random (population *pop)
+{
+    int i;
+
+    validate_problem_dimensions();
+    printf("\n Inicializacion aleatoria: %d individuos", popsize);
+
+    for (i = 0; i < popsize; i++)
+    {
+        initialize_ind_random(&(pop->ind[i]));
+    }
+
+    return;
+}
+
 /* Wrapper para mantener compatibilidad */
 void initialize_ind (individual *ind)
 {
@@ -122,11 +137,14 @@ void initialize_ind_random (individual *ind)
 }
 
 /* ============================================
-   INICIALIZACIÓN GREEDY POR COSTO
+   INICIALIZACIÓN GREEDY POR COSTO (con perturbación)
    ============================================
-   Para cada operación, elegir la máquina con MENOR COSTO.
-   Esto genera soluciones en el extremo de mínimo costo del frente Pareto.
+   Para cada operación, elegir la máquina con MENOR COSTO,
+   pero con probabilidad PERTURB_PROB elegir aleatoriamente
+   para generar individuos distintos cada vez.
 */
+#define GREEDY_PERTURB_PROB 0.3
+
 void initialize_ind_greedy_cost (individual *ind)
 {
     int j, k, m;
@@ -137,7 +155,12 @@ void initialize_ind_greedy_cost (individual *ind)
     {
         for (k = 0; k < nOps; k++)
         {
-            /* Encontrar la máquina con menor costo para esta operación */
+            if (randomperc() < GREEDY_PERTURB_PROB)
+            {
+                ind->gene[j][k] = rnd(0, nMachines - 1);
+                continue;
+            }
+            
             min_cost = ProcessingCost[j][0][k];
             best_machine = 0;
             
@@ -159,10 +182,10 @@ void initialize_ind_greedy_cost (individual *ind)
 }
 
 /* ============================================
-   INICIALIZACIÓN GREEDY POR TIEMPO
+   INICIALIZACIÓN GREEDY POR TIEMPO (con perturbación)
    ============================================
-   Para cada operación, elegir la máquina con MENOR TIEMPO.
-   Esto genera soluciones en el extremo de mínimo tiempo del frente Pareto.
+   Para cada operación, elegir la máquina con MENOR TIEMPO,
+   pero con probabilidad PERTURB_PROB elegir aleatoriamente.
 */
 void initialize_ind_greedy_time (individual *ind)
 {
@@ -174,7 +197,12 @@ void initialize_ind_greedy_time (individual *ind)
     {
         for (k = 0; k < nOps; k++)
         {
-            /* Encontrar la máquina con menor tiempo para esta operación */
+            if (randomperc() < GREEDY_PERTURB_PROB)
+            {
+                ind->gene[j][k] = rnd(0, nMachines - 1);
+                continue;
+            }
+            
             min_time = ProcessingTime[j][0][k];
             best_machine = 0;
             
@@ -196,11 +224,11 @@ void initialize_ind_greedy_time (individual *ind)
 }
 
 /* ============================================
-   INICIALIZACIÓN GREEDY BALANCEADA
+   INICIALIZACIÓN GREEDY BALANCEADA (con perturbación y pesos aleatorios)
    ============================================
    Para cada operación, elegir la máquina que minimiza
    una combinación ponderada de costo y tiempo (normalizado).
-   Esto genera soluciones en el medio del frente Pareto.
+   Pesos aleatorios por individuo para generar diversidad en el frente.
 */
 void initialize_ind_greedy_balanced (individual *ind)
 {
@@ -210,11 +238,20 @@ void initialize_ind_greedy_balanced (individual *ind)
     double max_cost, min_cost, max_time, min_time;
     double norm_cost, norm_time;
     
+    /* Pesos aleatorios por individuo para cubrir distintas zonas del frente */
+    double weight_cost = 0.2 + randomperc() * 0.6;
+    double weight_time = 1.0 - weight_cost;
+    
     for (j = 0; j < nJobs; j++)
     {
         for (k = 0; k < nOps; k++)
         {
-            /* Primero encontrar max y min para normalización */
+            if (randomperc() < GREEDY_PERTURB_PROB)
+            {
+                ind->gene[j][k] = rnd(0, nMachines - 1);
+                continue;
+            }
+            
             max_cost = min_cost = ProcessingCost[j][0][k];
             max_time = min_time = ProcessingTime[j][0][k];
             
@@ -226,13 +263,11 @@ void initialize_ind_greedy_balanced (individual *ind)
                 if (ProcessingTime[j][m][k] < min_time) min_time = ProcessingTime[j][m][k];
             }
             
-            /* Encontrar la máquina con mejor score balanceado */
             best_machine = 0;
             best_score = 1e30;
             
             for (m = 0; m < nMachines; m++)
             {
-                /* Normalizar costo y tiempo al rango [0, 1] */
                 if (max_cost > min_cost)
                     norm_cost = (ProcessingCost[j][m][k] - min_cost) / (max_cost - min_cost);
                 else
@@ -243,8 +278,7 @@ void initialize_ind_greedy_balanced (individual *ind)
                 else
                     norm_time = 0.0;
                 
-                /* Score balanceado: 50% costo + 50% tiempo */
-                current_score = 0.5 * norm_cost + 0.5 * norm_time;
+                current_score = weight_cost * norm_cost + weight_time * norm_time;
                 
                 if (current_score < best_score)
                 {

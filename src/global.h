@@ -92,6 +92,14 @@ extern int obj3;
 extern int angle1;
 extern int angle2;
 
+/* Switches de experimentación (1=activo, 0=desactivado; default 1) */
+extern int enable_diversity;         /* init mixta, mutación smart, penalización duplicados, búsqueda local */
+extern int enable_partial_restart;   /* reinicio parcial por convergencia prematura */
+extern int enable_preservation;      /* archivo externo e inyección periódica */
+
+/* Tiempo de ejecución del NSGA-II (segundos), medido hasta fin de generaciones */
+extern double nsga2_exec_time_sec;
+
 /* Prototipos de funciones */
 void allocate_memory_pop (population *pop, int size);
 void allocate_memory_ind (individual *ind);
@@ -135,6 +143,7 @@ void crowding_fill (population *mixed_pop, population *new_pop, int count, int f
 int is_duplicate_in_pop (population *new_pop, individual *ind, int current_count);
 
 void initialize_pop (population *pop);
+void initialize_pop_random (population *pop);
 void initialize_ind (individual *ind);
 
 void insert (list *node, int x);
